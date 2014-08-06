@@ -52,11 +52,14 @@ class NgramNeuralNetwork(object):
         embeddings = self.C[X].reshape((X.shape[0], -1))
         self._p_y_given_X = T.nnet.softmax(T.dot(T.dot(embeddings, self.H) + self.d, self.U.T) + self.b)
         self._negative_log_likelihood = -T.mean(T.log(self._p_y_given_X)[T.arange(y.shape[0]), y])
-        self.g_C = T.grad(self._negative_log_likelihood, self.C)
-        self.g_H = T.grad(self._negative_log_likelihood, self.H)
-        self.g_d = T.grad(self._negative_log_likelihood, self.d)
-        self.g_U = T.grad(self._negative_log_likelihood, self.U)
-        self.g_b = T.grad(self._negative_log_likelihood, self.b)
+        self._L2_sqr = (self.H.flatten() ** 2).sum() + (self.C.flatten() ** 2).sum()
+        self._objective = self._negative_log_likelihood + self._L2_sqr
+        # Derivatives of model parameters
+        self.g_C = T.grad(self._objective, self.C)
+        self.g_H = T.grad(self._objective, self.H)
+        self.g_d = T.grad(self._objective, self.d)
+        self.g_U = T.grad(self._objective, self.U)
+        self.g_b = T.grad(self._objective, self.b)
         # Training updates
         updates = [
             (self.C, self.C - e * self.g_C),
