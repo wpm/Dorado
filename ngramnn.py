@@ -17,31 +17,32 @@ class NgramNeuralNetwork(object):
     This uses single hidden player to predict a word embedding given
     preceding word embeddings.
     """
-    def __init__(self, V, n = 3, m = 10, h = 20):
+    def __init__(self, vocabulary, n = 3, m = 10, h = 20):
         """
-        @param V: vocabulary size
-        @type V: C{int}
-        @param n: N-gram order
+        @param V: vocabulary
+        @type V: L{IndexedVocabulary}
+        @param n: n-gram order
         @type n: C{int}
         @param m: word embedding size
         @type m: C{int}
         @param h: hidden layer size
         @type h: C{int}
         """
-        self.V = V
+        self.vocabulary = vocabulary
+        self.V = len(self.vocabulary)
         self.n = n
         self.m = m
         self.h = h
         # Word embeddings
-        self.C = theano.shared(random_matrix(V, m), name = 'C')
+        self.C = theano.shared(random_matrix(self.V, m), name = 'C')
         # Hidden layer
         self.H = theano.shared(random_matrix(h, (n - 1) * m), name = 'H')
         # Hidden layer bias
         self.d = theano.shared(np.zeros((h,)), name = 'd')
         # Projection layer
-        self.U = theano.shared(random_matrix(V, h), name = 'U')
+        self.U = theano.shared(random_matrix(self.V, h), name = 'U')
         # Projection layer bias     
-        self.b = theano.shared(np.zeros((V,)), name = 'b')        
+        self.b = theano.shared(np.zeros((self.V,)), name = 'b')        
         # Set of n-gram context indexes
         X = T.lmatrix('X')
         # Set of indexes of words following the contexts
@@ -80,27 +81,25 @@ class NgramNeuralNetwork(object):
         return "%s(V = %d, n = %d, m = %d, h = %d)" % \
             (self.__class__.__name__, self.V, self.n, self.m, self.h)
 
-    def train(self, vocabulary, tokens):
+    def train(self, tokens):
         """
         Train the model
 
-        @param vocabulary: word types with their corresponding indexes
-        @type vocabulary: IndexedVocabulary
         @param tokens: training data
         @type tokens: sequence of C{str}
         """
-        y, X = self._create_training_data(vocabulary, tokens)
+        y, X = self._create_training_data(tokens)
         # Create n-gram training set for corpus tokens.
         # Update model parameters with respect to positive examples in the training set.
         for i in xrange(10):
             p = self.training_update(X, y, 0.1)
             print("%d. %0.4f" % (i + 1, p))
 
-    def _create_training_data(self, vocabulary, tokens):
+    def _create_training_data(self, tokens):
         pad = [None] * (self.n - 1)
         tokens = pad + tokens + pad
-        y = np.asarray([vocabulary[token] for token in tokens[self.n - 1:]])
-        X = np.asarray([vocabulary(tokens[i:i + self.n - 1]) for i in xrange(len(tokens) - self.n + 1)])
+        y = np.asarray([self.vocabulary[token] for token in tokens[self.n - 1:]])
+        X = np.asarray([self.vocabulary(tokens[i:i + self.n - 1]) for i in xrange(len(tokens) - self.n + 1)])
         return y, X
 
 
@@ -154,17 +153,19 @@ class IndexedVocabulary(dict):
         """
         return self.get(token, 0)
 
+    def __len__(self):
+        """
+        The size of this vocabulary includes an out-of-vocabulary token
+        """
+        return len(self.keys()) + 1
 
-def example():
-    corpus = "to be or not to be that is the question"
+
+def main(corpus = "to be or not to be that is the question"):
     vocabulary = IndexedVocabulary(tokenize(corpus))
-    n = NgramNeuralNetwork(len(vocabulary) + 1)
-    return corpus, vocabulary, n
-
-def main():
-    corpus, vocabulary, n = example()
+    n = NgramNeuralNetwork(vocabulary)
     print(n)
-    n.train(vocabulary, tokenize(corpus))
+    n.train(tokenize(corpus))
+    return corpus, n
 
 
 if __name__ == '__main__':
