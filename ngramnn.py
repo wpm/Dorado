@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from nltk import word_tokenize as tokenize
+from nltk.model.api import ModelI
 import numpy as np
 import theano
 import theano.tensor as T
@@ -10,7 +11,7 @@ from theano import function
 An n-gram language model that uses a neural network with distributed word representations.
 """
 
-class NgramNeuralNetwork(object):
+class NgramNeuralNetwork(ModelI):
     """
     Neural Network language model
 
@@ -71,6 +72,8 @@ class NgramNeuralNetwork(object):
         ]
         # Compiled functions.
         self.p_y_given_X = function([X], self._p_y_given_X)
+        self.p = function([y, X], self._p_y_given_X[y])
+        self.log_p = function([y, X], T.log(self._p_y_given_X[y]))
         self.negative_log_likelihood = function([X, y], self._negative_log_likelihood)
         self.training_update = function(
             inputs = [X, y, e],
@@ -81,18 +84,20 @@ class NgramNeuralNetwork(object):
         return "%s(V = %d, n = %d, m = %d, h = %d)" % \
             (self.__class__.__name__, self.V, self.n, self.m, self.h)
 
-    def train(self, tokens):
+    def train(self, tokens, training_rate = 0.1):
         """
         Train the model
 
         @param tokens: training data
         @type tokens: sequence of C{str}
+        @param training_rate: training rate
+        @type training_rate: C{float}
         """
         y, X = self._create_training_data(tokens)
         # Create n-gram training set for corpus tokens.
         # Update model parameters with respect to positive examples in the training set.
         for i in xrange(10):
-            p = self.training_update(X, y, 0.1)
+            p = self.training_update(X, y, training_rate)
             print("%d. %0.4f" % (i + 1, p))
 
     def _create_training_data(self, tokens):
@@ -101,6 +106,26 @@ class NgramNeuralNetwork(object):
         y = np.asarray([self.vocabulary[token] for token in tokens[self.n - 1:]])
         X = np.asarray([self.vocabulary(tokens[i:i + self.n - 1]) for i in xrange(len(tokens) - self.n + 1)])
         return y, X
+
+    def prob(self, token, context):
+        return self.p(self.vocabulary([token]), self.vocabulary(context))
+
+    def logprob(self, token, context):
+        return self.log_p(self.vocabulary([token]), self.vocabulary(context))
+
+    def entropy(self, tokens):
+        # Do this as a single batch?
+        e = 0.0
+        pad = [None] * (self.n-1)
+        tokens = pad + tokens + pad
+        for i in range(self.n-1, len(tokens)):
+                context = tokens[i-self.n+1:i]
+                token = tokens[i]
+                e += self.logprob(token, context)
+        return e / float(len(tokens) - (self.n-1))
+
+    def perplexity(self, tokens):
+        return pow(2.0, self.entropy(tokens))
 
 
 def random_matrix(r, c):
