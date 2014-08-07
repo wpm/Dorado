@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from nltk import word_tokenize as tokenize
 import numpy as np
 import theano
 import theano.tensor as T
@@ -81,25 +80,11 @@ class NgramNeuralNetwork(object):
         return "%s(V = %d, n = %d, m = %d, h = %d)" % \
             (self.__class__.__name__, self.V, self.n, self.m, self.h)
 
-    def train(self, tokens, training_rate = 0.1):
-        """
-        Train the model
-
-        @param tokens: training data
-        @type tokens: sequence of C{str}
-        @param training_rate: training rate
-        @type training_rate: C{float}
-        """
-        y, X = self._embed_tokens(tokens)
-        for i in xrange(10):
-            p = self.training_update(X, y, training_rate)
-            print("%d. %0.4f" % (i + 1, p))
-
     def perplexity(self, tokens):
-        y, X = self._embed_tokens(tokens)
+        y, X = self.embed_tokens(tokens)
         return pow(2, self.negative_log_likelihood(X, y)/y.shape[0])
 
-    def _embed_tokens(self, tokens):
+    def embed_tokens(self, tokens):
         pad = [None] * (self.n - 1)
         tokens = pad + tokens + pad
         y = np.asarray([self.vocabulary[token] for token in tokens[self.n - 1:]])
@@ -164,13 +149,19 @@ class IndexedVocabulary(dict):
         return len(self.keys()) + 1
 
 
-def main(corpus = "to be or not to be that is the question"):
-    vocabulary = IndexedVocabulary(tokenize(corpus))
+def train(training_corpus):
+    vocabulary = IndexedVocabulary(training_corpus)
     n = NgramNeuralNetwork(vocabulary)
     print(n)
-    n.train(tokenize(corpus))
-    return corpus, n
+    e0 = 10E-3
+    y, X = n.embed_tokens(training_corpus)
+    for i in xrange(10):
+        p = n.training_update(X, y, e0/(1+i))
+        print("%d. %0.4f" % (i + 1, p))
+    return n
 
 
 if __name__ == '__main__':
-    main()
+    from nltk.corpus import brown
+
+    train(brown.words()[:5000])
