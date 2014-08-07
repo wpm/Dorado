@@ -80,6 +80,28 @@ class NgramNeuralNetwork(object):
         return "%s(V = %d, n = %d, m = %d, h = %d)" % \
             (self.__class__.__name__, self.V, self.n, self.m, self.h)
 
+    def train(self, vocabulary, tokens):
+        """
+        Train the model
+
+        @param vocabulary: word types with their corresponding indexes
+        @type vocabulary: IndexedVocabulary
+        @param tokens: training data
+        @type tokens: sequence of C{str}
+        """
+        y, X = self._create_training_data(vocabulary, tokens)
+        # Create n-gram training set for corpus tokens.
+        # Update model parameters with respect to positive examples in the training set.
+        for i in xrange(10):
+            p = self.training_update(X, y, 0.1)
+            print("%d. %0.4f" % (i + 1, p))
+
+    def _create_training_data(self, vocabulary, tokens):
+        pad = [None] * (self.n - 1)
+        tokens = pad + tokens + pad
+        y = np.asarray([vocabulary[token] for token in tokens[self.n - 1:]])
+        X = np.asarray([vocabulary(tokens[i:i + self.n - 1]) for i in xrange(len(tokens) - self.n + 1)])
+        return y, X
 
 
 def random_matrix(r, c):
@@ -133,39 +155,16 @@ class IndexedVocabulary(dict):
         return self.get(token, 0)
 
 
-def training_set(corpus, vocabulary, n = 3):
-    """
-    Create an n-gram training set from a corpus
-
-    @param corpus: training corpus
-    @type corpus: C{str}
-    @param vocabulary: word types with their corresponding indexes
-    @type vocabulary: IndexedVocabulary
-    @param n: n-gram order
-    @type n: C{int}
-    @return: (training set, labels)
-    @rtype: (indexes of w-1, w-2 ..., index of w)
-    """
-    tokens = tokenize(corpus)
-    pad = [None] * (n - 1)
-    tokens = pad + tokens + pad
-    X = np.asarray([vocabulary(tokens[i:i + n - 1]) for i in xrange(len(tokens) - n + 1)])
-    y = np.asarray([vocabulary[token] for token in tokens[n - 1:]])
-    return X, y
-
 def example():
     corpus = "to be or not to be that is the question"
     vocabulary = IndexedVocabulary(tokenize(corpus))
     n = NgramNeuralNetwork(len(vocabulary) + 1)
-    X, y = training_set(corpus, vocabulary)
-    return corpus, vocabulary, n, X, y
+    return corpus, vocabulary, n
 
 def main():
-    corpus, vocabulary, n, X, y = example()
+    corpus, vocabulary, n = example()
     print(n)
-    for i in xrange(10):
-        p = n.training_update(X, y, 0.1)
-        print("%d. %0.4f" % (i + 1, p))
+    n.train(vocabulary, tokenize(corpus))
 
 
 if __name__ == '__main__':
