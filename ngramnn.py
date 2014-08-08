@@ -85,7 +85,7 @@ class NgramNeuralNetwork(object):
 
     def perplexity(self, tokens):
         y, X = self.embed_tokens(tokens)
-        return pow(2, self.negative_log_likelihood(X, y)/y.shape[0])
+        return pow(2, self.negative_log_likelihood(X, y))
 
     def embed_tokens(self, tokens):
         pad = [None] * (self.n - 1)
@@ -152,19 +152,27 @@ class IndexedVocabulary(dict):
         return len(self.keys()) + 1
 
 
-def train(training_corpus):
-    vocabulary = IndexedVocabulary(training_corpus)
+def train(training_corpus, validation_corpus, batch_size = 100, epochs = 1000, learning_rate = 0.13):
+    vocabulary = IndexedVocabulary(training_corpus + validation_corpus)
     n = NgramNeuralNetwork(vocabulary)
     print(n)
-    e0 = 10E-3
     y, X = n.embed_tokens(training_corpus)
-    for i in xrange(10):
-        p = n.training_update(X, y, e0/(1+i))
-        print("%d. %0.4f" % (i + 1, p))
+    batches = X.shape[0]/batch_size
+    items = 0
+    for epoch in xrange(epochs):
+        for batch in xrange(batches):
+            i = batch * batch_size
+            j = i + batch_size
+            y_batch = y[i:j]
+            X_batch = X[i:j]
+            p_train = n.training_update(X_batch, y_batch, learning_rate)
+            p_valid = n.perplexity(validation_corpus)
+            items += y_batch.size
+            print("%d. %0.4f\t%0.4f" % (items, p_train, p_valid))
     return n
 
 
 if __name__ == '__main__':
     from nltk.corpus import brown
 
-    train(brown.words()[:5000])
+    train(brown.words()[:10000], brown.words()[1000000:1001000])
