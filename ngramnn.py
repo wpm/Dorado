@@ -17,12 +17,12 @@ class NgramNeuralNetwork(object):
     preceding word embeddings.
 
     The algorithm is based on Bengio et al. 2003
-    "U{A Neural Probabilistic Language Model}<http://dl.acm.org/citation.cfm?id=944966>".
+    "U{A Neural Probabilistic Language Model<http://dl.acm.org/citation.cfm?id=944966>}".
     """
     def __init__(self, vocabulary, n = 3, m = 10, h = 20):
         """
-        @param V: vocabulary
-        @type V: L{IndexedVocabulary}
+        @param vocabulary: vocabulary
+        @type vocabulary: L{IndexedVocabulary}
         @param n: n-gram order
         @type n: C{int}
         @param m: word embedding size
@@ -99,9 +99,9 @@ def random_matrix(r, c):
     """
     Matrix with random elements selected uniformly from [0,1].
     @param r: rows
-    @type n: C{int}
+    @type r: C{int}
     @param c: columns
-    @type n: C{int}
+    @type c: C{int}
     @return: randomly generated matrix
     @rtype: C{np.array}
     """
