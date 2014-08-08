@@ -15,6 +15,9 @@ class NgramNeuralNetwork(object):
 
     This uses single hidden player to predict a word embedding given
     preceding word embeddings.
+
+    The algorithm is based on Bengio et al. 2003
+    "U{A Neural Probabilistic Language Model}<http://dl.acm.org/citation.cfm?id=944966>".
     """
     def __init__(self, vocabulary, n = 3, m = 10, h = 20):
         """
