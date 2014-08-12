@@ -47,12 +47,14 @@ class NgramNeuralNetwork(object):
         # Set of n-gram context indexes
         X = T.lmatrix('X')
         # Set of indexes of words following the contexts
-        y = T.lvector()
+        y = T.lvector('y')
         # Learning rate
         e = T.scalar('e')
         # Symbolic functions
         embeddings = self.C[X].reshape((X.shape[0], -1))
         self._p_y_given_X = T.nnet.softmax(T.dot(T.dot(embeddings, self.H) + self.d, self.U.T) + self.b)
+        self._y_pred = T.argmax(self._p_y_given_X, axis=1)
+        self._error = T.mean(T.neq(self._y_pred, y))
         self._negative_log_likelihood = -T.mean(T.log(self._p_y_given_X)[T.arange(y.shape[0]), y])
         self._L2_sqr = (self.H.flatten() ** 2).sum() + (self.C.flatten() ** 2).sum()
         self._objective = self._negative_log_likelihood + self._L2_sqr
@@ -77,16 +79,18 @@ class NgramNeuralNetwork(object):
             inputs = [X, y, e],
             outputs = self._negative_log_likelihood,
             updates = updates)
+        self.predict = function([X], self._y_pred)
+        self.error = function([X, y], self._error)
 
     def __repr__(self):
         return "%s(V = %d, n = %d, m = %d, h = %d)" % \
             (self.__class__.__name__, self.V, self.n, self.m, self.h)
 
     def perplexity(self, tokens):
-        y, X = self.embed_tokens(tokens)
+        y, X = self.embed_ngrams(tokens)
         return pow(2, self.negative_log_likelihood(X, y))
 
-    def embed_tokens(self, tokens):
+    def embed_ngrams(self, tokens):
         pad = [None] * (self.n - 1)
         tokens = pad + tokens + pad
         y = np.asarray([self.vocabulary[token] for token in tokens[self.n - 1:]])
