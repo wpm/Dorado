@@ -18,7 +18,7 @@ class NgramNeuralNetwork(object):
     The algorithm is based on Bengio et al. 2003
     "U{A Neural Probabilistic Language Model<http://dl.acm.org/citation.cfm?id=944966>}".
     """
-    def __init__(self, vocabulary, n = 3, m = 10, h = 20):
+    def __init__(self, vocabulary, n = 5, m = 30, h = 50):
         """
         @param vocabulary: vocabulary
         @type vocabulary: L{IndexedVocabulary}
@@ -45,17 +45,17 @@ class NgramNeuralNetwork(object):
         # Projection layer bias     
         self.b = theano.shared(np.zeros((self.V,)), name = 'b')        
         # Set of n-gram context indexes
-        X = T.lmatrix('X')
+        self.X = T.lmatrix('X')
         # Set of indexes of words following the contexts
-        y = T.lvector('y')
+        self.y = T.lvector('y')
         # Learning rate
-        e = T.scalar('e')
+        self.e = T.scalar('e')
         # Symbolic functions
-        embeddings = self.C[X].reshape((X.shape[0], -1))
-        self._p_y_given_X = T.nnet.softmax(T.dot(T.dot(embeddings, self.H) + self.d, self.U.T) + self.b)
+        self._embeddings = self.C[self.X].reshape((self.X.shape[0], -1))
+        self._p_y_given_X = T.nnet.softmax(T.dot(T.dot(self._embeddings, self.H.T) + self.d, self.U.T) + self.b)
         self._y_pred = T.argmax(self._p_y_given_X, axis=1)
-        self._error = T.mean(T.neq(self._y_pred, y))
-        self._negative_log_likelihood = -T.mean(T.log(self._p_y_given_X)[T.arange(y.shape[0]), y])
+        self._error = T.mean(T.neq(self._y_pred, self.y))
+        self._negative_log_likelihood = -T.mean(T.log(self._p_y_given_X)[T.arange(self.y.shape[0]), self.y])
         self._L2_sqr = (self.H.flatten() ** 2).sum() + (self.C.flatten() ** 2).sum()
         self._objective = self._negative_log_likelihood + self._L2_sqr
         # Derivatives of model parameters
@@ -66,21 +66,21 @@ class NgramNeuralNetwork(object):
         self.g_b = T.grad(self._objective, self.b)
         # Training updates
         updates = [
-            (self.C, self.C - e * self.g_C),
-            (self.H, self.H - e * self.g_H),
-            (self.d, self.d - e * self.g_d),
-            (self.U, self.U - e * self.g_U),
-            (self.b, self.b - e * self.g_b)
+            (self.C, self.C - self.e * self.g_C),
+            (self.H, self.H - self.e * self.g_H),
+            (self.d, self.d - self.e * self.g_d),
+            (self.U, self.U - self.e * self.g_U),
+            (self.b, self.b - self.e * self.g_b)
         ]
         # Compiled functions.
-        self.p_y_given_X = function([X], self._p_y_given_X)
-        self.negative_log_likelihood = function([X, y], self._negative_log_likelihood)
+        self.p_y_given_X = function([self.X], self._p_y_given_X)
+        self.negative_log_likelihood = function([self.X, self.y], self._negative_log_likelihood)
         self.training_update = function(
-            inputs = [X, y, e],
+            inputs = [self.X, self.y, self.e],
             outputs = self._negative_log_likelihood,
             updates = updates)
-        self.predict = function([X], self._y_pred)
-        self.error = function([X, y], self._error)
+        self.predict = function([self.X], self._y_pred)
+        self.error = function([self.X, self.y], self._error)
 
     def __repr__(self):
         return "%s(V = %d, n = %d, m = %d, h = %d)" % \
