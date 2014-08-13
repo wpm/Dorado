@@ -9,7 +9,7 @@ import numpy as np
 from ngramnn import NgramNeuralNetwork, IndexedVocabulary
 
 def train(training_corpus, validation_corpus,
-            batch_size = 100, epochs = 1000, learning_rate = 0.13):
+            batch_size = 100, epochs = 1000, learning_rate = 0.001):
     vocabulary = IndexedVocabulary(training_corpus + validation_corpus)
     model = NgramNeuralNetwork(vocabulary)
     logging.info(model)

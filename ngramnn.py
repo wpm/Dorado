@@ -37,7 +37,7 @@ class NgramNeuralNetwork(object):
         # Word embeddings
         self.C = theano.shared(random_matrix(self.V, m), name = 'C')
         # Hidden layer
-        self.H = theano.shared(random_matrix(h, (n - 1) * m), name = 'H')
+        self.H = theano.shared(random_matrix((n - 1) * m, h), name = 'H')
         # Hidden layer bias
         self.d = theano.shared(np.zeros((h,)), name = 'd')
         # Projection layer
@@ -52,7 +52,7 @@ class NgramNeuralNetwork(object):
         self.e = T.scalar('e')
         # Symbolic functions
         self._embeddings = self.C[self.X].reshape((self.X.shape[0], -1))
-        self._p_y_given_X = T.nnet.softmax(T.dot(T.dot(self._embeddings, self.H.T) + self.d, self.U.T) + self.b)
+        self._p_y_given_X = T.nnet.softmax(T.dot(T.dot(self._embeddings, self.H) + self.d, self.U.T) + self.b)
         self._y_pred = T.argmax(self._p_y_given_X, axis=1)
         self._error = T.mean(T.neq(self._y_pred, self.y))
         self._negative_log_likelihood = -T.mean(T.log(self._p_y_given_X)[T.arange(self.y.shape[0]), self.y])
@@ -108,7 +108,7 @@ def random_matrix(r, c):
     @return: randomly generated matrix
     @rtype: C{np.array}
     """
-    return np.random.uniform(size = (r, c))
+    return np.random.uniform(-1, 1, (r, c))
 
 
 class IndexedVocabulary(dict):
@@ -153,3 +153,10 @@ class IndexedVocabulary(dict):
         The size of this vocabulary includes an out-of-vocabulary token
         """
         return len(self.keys()) + 1
+
+    def reverse_lookup(self, index):
+        for k,v in self.iteritems():
+            if v == index:
+                return k
+        return None
+
