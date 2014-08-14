@@ -15,6 +15,7 @@ The digits data set is here http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mn
 
 parser = argparse.ArgumentParser(__doc__)
 parser.add_argument('data', help = 'MNIST digits data set')
+parser.add_argument('model', help = 'Trained model file')
 parser.add_argument('--batch', type = int, default = 100, help = 'batch size')
 parser.add_argument('--epochs', type = int, default = 1000, help = 'maximum training epochs')
 parser.add_argument('--patience', type = int, help = 'number of training examples to see before an early stop')
@@ -56,3 +57,9 @@ model, validation_error = sgd_train.sgd_train(
         training_parameters, training_set, validation_set
     )
 logging.info("Best validation error rate %04f" % validation_error)
+
+# Write the model to a zipped file.
+print("model %s" % args.model)
+f = gzip.open(args.model, 'w')
+cPickle.dump(model, f)
+f.close()
