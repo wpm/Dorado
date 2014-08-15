@@ -4,11 +4,8 @@ import argparse
 import cPickle
 import gzip
 
-"""
-Use a model to print the error rate of labeled data
-"""
 
-parser = argparse.ArgumentParser(__doc__)
+parser = argparse.ArgumentParser()
 parser.add_argument('model', help = 'Zipped model file')
 parser.add_argument('data', help = 'Pickled labeled data of the form (vectors, labels)')
 args = parser.parse_args()

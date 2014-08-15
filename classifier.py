@@ -1,3 +1,7 @@
+
+from copy import deepcopy
+import logging
+from math import sqrt
 import numpy as np
 import theano.tensor as T
 import theano
@@ -41,26 +45,126 @@ class LabeledData(object):
         return LabeledData(self.y, self.x)
 
 
-class LogisticRegressionClassifier(object):
-    """Logistic regression classifier"""
-    def __init__(self, n_in, n_out, y = T.lvector('y'), x = T.matrix('x')):
+def random_matrix(r, c, b = 1):
+    """
+    Matrix with random elements selected uniformly from [-b, b].
+    @param r: rows
+    @type r: C{int}
+    @param c: columns
+    @type c: C{int}
+    @param b: bound
+    @type b: C{float}
+    @return: randomly generated matrix
+    @rtype: C{np.array}
+    """
+    return np.random.uniform(-b, b, (r, c))
+
+
+class Classifier(object):
+    """An abstract machine learning classifier"""
+    def __init__(self, dim, classes, y = T.lvector('y'), x = T.matrix('x')):
+        self.x = x
+        self.y = y
         e = T.scalar('e')
-        self.W = shared(np.zeros((n_in, n_out), dtype=theano.config.floatX), name = 'W')
-        self.b = shared(np.zeros((n_out,), dtype=theano.config.floatX), name = 'b')
-        p_y_given_x = T.nnet.softmax(T.dot(x, self.W) + self.b)
-        negative_log_likelihood = -T.mean(T.log(p_y_given_x)[T.arange(y.shape[0]), y])
-        y_pred = T.argmax(p_y_given_x, axis=1)
-        g_W = T.grad(negative_log_likelihood, self.W)
-        g_b = T.grad(negative_log_likelihood, self.b)
-        self.training_iteration = function([y, x, e],
-            negative_log_likelihood,
-            updates = [
-                (self.W, self.W - e * g_W),
-                (self.b, self.b - e * g_b)
-                ])
+        self.dim = dim
+        self.classes = classes
+        y_pred = T.argmax(self.p_y_given_x(), axis=1)
+        updates = [(p, p - e * T.grad(self.cost(), p)) for p in self.parameters()]
+        self.sgd_training_iteration = function([y, x, e], self.cost(), updates = updates)
         self.error_rate = function([y, x], T.mean(T.neq(y_pred, y)))
         self.predict = function([x], y_pred)
 
+    def parameters(self):
+        raise NotImplementedError()
+
+    def p_y_given_x(self):
+        raise NotImplementedError()
+
+    def cost(self):
+        raise NotImplementedError()
+
+
+def sgd_train(model, training_set, validation_set, batch_size, patience_rate,
+                epochs, rate, validation_frequency):
+    # The default patience rate and validation frequency are both a single epoch.
+    if patience_rate == None:
+        patience_rate = len(training_set)
+    if validation_frequency == None:
+        validation_frequency = len(training_set)/batch_size
+    training_set = training_set.shuffle()
+    batches = training_set.partition(batch_size)
+    patience = patience_rate
+    training_points = 0
+    iterations = 0
+    best_error_rate = np.inf
+    early_stop = False
+    epoch = 0
+    best_model = model
+    while epoch < epochs and not early_stop:
+        epoch += 1
+        logging.info("Epoch %d" % epoch)
+        for b, batch in enumerate(batches):
+            logging.debug("Batch %d" % (b + 1))
+            iterations += 1
+            p = model.sgd_training_iteration(batch.y, batch.x, rate)
+            logging.debug("Training NLL %04f" % p)
+            training_points += len(batch)
+            if iterations % validation_frequency == 0:
+                error_rate = model.error_rate(validation_set.y, validation_set.x)
+                logging.info("%d. Validation error rate %04f" % (iterations, error_rate))
+                if error_rate < best_error_rate:
+                    best_error_rate = error_rate
+                    best_model = deepcopy(model)
+                    patience = training_points + patience_rate
+                elif training_points > patience:
+                    early_stop = True
+                    break
+    logging.info("Best validation error rate %04f" % best_error_rate)
+    return best_model, best_error_rate
+
+
+class LogisticRegression(Classifier):
+    """Logistic regression"""
+    def __init__(self, dim, classes, y = T.lvector('y'), x = T.matrix('x')):
+        self.W = shared(np.zeros((dim, classes), dtype=theano.config.floatX), name = 'W')
+        self.b = shared(np.zeros((classes,), dtype=theano.config.floatX), name = 'b')
+        super(LogisticRegression, self).__init__(dim, classes, y, x)
+
+    def parameters(self):
+        return [self.W, self.b]
+
+    def p_y_given_x(self):
+        return T.nnet.softmax(T.dot(self.x, self.W) + self.b)
+
+    def cost(self):
+        return -T.mean(T.log(self.p_y_given_x())[T.arange(self.y.shape[0]), self.y])
+
     def __repr__(self):
-        n_in, n_out = self.W.get_value().shape
-        return "%s(n_in = %d, n_out = %d)" % (self.__class__.__name__, n_in, n_out)
+        dim, classes = self.W.get_value().shape
+        return "%s(dim = %d, classes = %d)" % (self.__class__.__name__, dim, classes)
+
+
+class NeuralNetwork(Classifier):
+    def __init__(self, dim, classes, h, y = T.lvector('y'), x = T.matrix('x')):
+        self.h = h
+        b = 4 * sqrt(6.0/(dim + self.h))
+        self.H = shared(random_matrix(dim, self.h, b), name = 'H')
+        self.d = shared(np.zeros((self.h,), dtype = theano.config.floatX), name = 'd')
+        b = 4 * sqrt(6.0/(self.h + classes))
+        self.U = shared(random_matrix(self.h, classes, b), name = 'U')
+        self.W = shared(np.zeros((dim, classes), dtype=theano.config.floatX), name = 'W')
+        self.b = shared(np.zeros((classes,), dtype=theano.config.floatX), name = 'b')
+        super(NeuralNetwork, self).__init__(dim, classes, y, x)
+
+    def parameters(self):
+        return [self.H, self.d, self.U, self.W, self.b]
+
+    def p_y_given_x(self):
+        return T.nnet.softmax(T.dot(T.dot(self.x, self.H) + self.d, self.U) + T.dot(self.x, self.W) + self.b)
+
+    def cost(self):
+        return -T.mean(T.log(self.p_y_given_x())[T.arange(self.y.shape[0]), self.y])
+
+    def __repr__(self):
+        dim, classes = self.W.get_value().shape
+        return "%s(dim = %d, classes = %d, h = %d)" % (self.__class__.__name__, dim, classes, self.h)
