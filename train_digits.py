@@ -7,17 +7,20 @@ import cPickle
 import gzip
 import logging
 
-"""
-Logistic Regression of Digit Recognition
 
+parser = argparse.ArgumentParser(description = 
+"""
+Train a classifier on the MNIST digit recognition task.
 The digits data set is here http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz
-"""
-
-parser = argparse.ArgumentParser()
+""")
 parser.add_argument('data', help = 'MNIST digits data set')
+parser.add_argument('type', choices = ['lg', 'nn'], 
+    help = 'Classifier type: logistic regression or neural network')
 parser.add_argument('model', help = 'Trained model file')
 parser.add_argument('--l1', type = float, default = 0.0, help = 'L1 regularization constant')
 parser.add_argument('--l2', type = float, default = 0.0, help = 'L2 regularization constant')
+parser.add_argument('--hidden', type = int, default = 1000,
+    help = 'Number of neural network hidden nodes')
 parser.add_argument('--batch', type = int, default = 100, help = 'batch size')
 parser.add_argument('--epochs', type = int, default = 1000, help = 'maximum training epochs')
 parser.add_argument('--patience', type = int,
@@ -39,8 +42,11 @@ training_set = LabeledData(train_set[1], train_set[0])
 validation_set = LabeledData(valid_set[1], valid_set[0])
 
 # Train the model.
-classifier = LogisticRegression(training_set.dim(), 10, args.l1, args.l2)
-# classifier = NeuralNetwork(training_set.dim(), 10, 1000, args.l1, args.l2)
+classifier = {
+    'lg':LogisticRegression(training_set.dim(), 10, args.l1, args.l2),
+    'nn':NeuralNetwork(training_set.dim(), 10, args.hidden, args.l1, args.l2)
+}[args.type]
+
 model, validation_error = sgd_train(
         classifier, 
         training_set, validation_set,
