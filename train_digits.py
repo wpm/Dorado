@@ -16,6 +16,8 @@ The digits data set is here http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mn
 parser = argparse.ArgumentParser()
 parser.add_argument('data', help = 'MNIST digits data set')
 parser.add_argument('model', help = 'Trained model file')
+parser.add_argument('--l1', type = float, default = 0.0, help = 'L1 regularization constant')
+parser.add_argument('--l2', type = float, default = 0.0, help = 'L2 regularization constant')
 parser.add_argument('--batch', type = int, default = 100, help = 'batch size')
 parser.add_argument('--epochs', type = int, default = 1000, help = 'maximum training epochs')
 parser.add_argument('--patience', type = int,
@@ -37,8 +39,8 @@ training_set = LabeledData(train_set[1], train_set[0])
 validation_set = LabeledData(valid_set[1], valid_set[0])
 
 # Train the model.
-classifier = LogisticRegression(training_set.dim(), 10)
-# classifier = NeuralNetwork(training_set.dim(), 10, 1000)
+classifier = LogisticRegression(training_set.dim(), 10, args.l1, args.l2)
+# classifier = NeuralNetwork(training_set.dim(), 10, 1000, args.l1, args.l2)
 model, validation_error = sgd_train(
         classifier, 
         training_set, validation_set,
