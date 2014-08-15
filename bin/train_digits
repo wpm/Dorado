@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import argparse
-from classifier import LabeledData, sgd_train
-from classifier import LogisticRegression, NeuralNetwork
+from dorado import LabeledData, sgd_train
+from dorado import LogisticRegression, NeuralNetwork
 import cPickle
 import gzip
 import logging
