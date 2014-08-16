@@ -30,6 +30,10 @@ class LabeledData(object):
         """
         return self.x.shape[1]
 
+    def classes(self):
+        """The number of unique classes"""
+        return np.unique(self.y).size
+
     def partition(self, batch_size):
         batches = []
         n = len(self)/batch_size

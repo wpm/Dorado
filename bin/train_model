@@ -1,22 +1,22 @@
 #!/usr/bin/env python
 
 import argparse
+import cPickle
 from dorado import LabeledData, sgd_train
 from dorado import LogisticRegression, NeuralNetwork
-import cPickle
 import gzip
 import logging
 
 
-parser = argparse.ArgumentParser(description = 
-"""
-Train a classifier on the MNIST digit recognition task.
-The digits data set is here http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz
-""")
-parser.add_argument('data', help = 'MNIST digits data set')
+parser = argparse.ArgumentParser(
+    description = "Train a classifier using stochastic gradient descent.")
+parser.add_argument('train', help = 'training data')
+parser.add_argument('validation', help = 'validation data')
 parser.add_argument('type', choices = ['lg', 'nn'], 
     help = 'Classifier type: logistic regression or neural network')
 parser.add_argument('model', help = 'Trained model file')
+parser.add_argument('--classes', type = int, 
+    help = 'number of classes, default is the number of unique labels in training')
 parser.add_argument('--l1', type = float, default = 0.0, help = 'L1 regularization constant')
 parser.add_argument('--l2', type = float, default = 0.0, help = 'L2 regularization constant')
 parser.add_argument('--hidden', type = int, default = 1000,
@@ -34,17 +34,24 @@ args = parser.parse_args()
 logging.basicConfig(format='%(asctime)s %(message)s', 
     level = getattr(logging, args.log.upper()))
 
-# Read in digit data.
-with gzip.open(args.data) as f:
-    train_set, valid_set, test_set = cPickle.load(f)
+# Read in data.
+with gzip.open(args.train) as f:
+    train_set = cPickle.load(f)
+
+with gzip.open(args.validation) as f:
+    valid_set = cPickle.load(f)
 
 training_set = LabeledData(train_set[1], train_set[0])
 validation_set = LabeledData(valid_set[1], valid_set[0])
 
 # Train the model.
+if args.classes == None:
+    classes = training_set.classes()
+else:
+    classes = args.classes
 classifier = {
-    'lg':LogisticRegression(training_set.dim(), 10, args.l1, args.l2),
-    'nn':NeuralNetwork(training_set.dim(), 10, args.hidden, args.l1, args.l2)
+    'lg':LogisticRegression(training_set.dim(), classes, args.l1, args.l2),
+    'nn':NeuralNetwork(training_set.dim(), classes, args.hidden, args.l1, args.l2)
 }[args.type]
 
 model, validation_error = sgd_train(
@@ -54,6 +61,6 @@ model, validation_error = sgd_train(
     )
 
 # Write the model to a zipped file.
-print("model %s" % args.model)
 with gzip.open(args.model, 'w') as f:
     cPickle.dump(model, f)
+logging.info("Created model %s" % args.model)
