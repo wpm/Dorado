@@ -134,7 +134,7 @@ def sgd_train(model, training_set, validation_set, batch_size, patience_rate,
             logging.debug("Batch %d" % (b + 1))
             iterations += 1
             p = model.sgd_training_iteration(batch.y, batch.x, rate)
-            logging.debug("Training NLL %04f" % p)
+            logging.debug("Training cost %04f" % p)
             training_points += len(batch)
             if iterations % validation_frequency == 0:
                 error_rate = model.error_rate(validation_set.y, validation_set.x)
