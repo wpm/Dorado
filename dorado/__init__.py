@@ -48,14 +48,17 @@ class LabeledData(object):
 def random_matrix(r, c, b = 1):
     """
     Matrix with random elements selected uniformly from [-b, b].
-    @param r: rows
-    @type r: C{int}
-    @param c: columns
-    @type c: C{int}
-    @param b: bound
-    @type b: C{float}
-    @return: randomly generated matrix
-    @rtype: C{np.array}
+
+    :type r: int
+    :param r: rows
+
+    :type c: int
+    :param c: columns
+    
+    :type b: float
+    :param b: bound
+
+    :returns: randomly generated matrix
     """
     return np.random.uniform(-b, b, (r, c))
 
