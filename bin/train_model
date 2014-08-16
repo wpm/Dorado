@@ -54,7 +54,7 @@ classifier = {
     'nn':NeuralNetwork(training_set.dim(), classes, args.hidden, args.l1, args.l2)
 }[args.type]
 
-model, validation_error = sgd_train(
+model = sgd_train(
         classifier, 
         training_set, validation_set,
         args.batch, args.patience, args.epochs, args.rate, args.frequency

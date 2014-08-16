@@ -111,6 +111,8 @@ class Classifier(object):
 
 def sgd_train(model, training_set, validation_set, batch_size, patience_rate,
                 epochs, rate, validation_frequency):
+    logging.info(model)
+    logging.info("Train on %d labeled examples" % len(training_set))
     # The default patience rate and validation frequency are both a single epoch.
     if patience_rate == None:
         patience_rate = len(training_set)
