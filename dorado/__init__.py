@@ -1,4 +1,3 @@
-
 import argparse
 from copy import deepcopy
 import cPickle
@@ -63,6 +62,10 @@ class LabeledData(object):
         self.y = y
         self.x = x
 
+    def __repr__(self):
+        return "<%s %d examples, dimension %d, %d classes>" % \
+            (self.__class__.__name__, len(self), self.dim(), self.classes())
+
     def __len__(self):
         """
         Numbered of labeled examples
@@ -111,9 +114,21 @@ def random_matrix(r, c, b = 1):
     """
     return np.random.uniform(-b, b, (r, c))
 
+def average_models(models):
+    # List of list of model parameters.
+    ps = zip(*[model.parameters() for model in models])
+    # Take the mean of each parameter.
+    ms = [np.mean([m.get_value() for m in p], axis = 0) for p in ps]
+    # Make a copy of the first model and assigned the averaged parameter
+    # values to it.
+    averaged_model = deepcopy(models[0])
+    for p,v in zip(averaged_model.parameters(), ms):
+        p.set_value(v)
+    return averaged_model
 
 class Classifier(object):
     """An abstract machine learning classifier"""
+
     def __init__(self, dim, classes, l1 = 0.0, l2 = 0.0):
         self.y = T.lvector('y')
         self.x = T.matrix('x')
