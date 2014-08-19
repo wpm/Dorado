@@ -1,5 +1,8 @@
 
+import argparse
 from copy import deepcopy
+import cPickle
+import gzip
 import logging
 from math import sqrt
 import numpy as np
@@ -8,10 +11,51 @@ import theano
 from theano import function, shared
 
 
+def model_training_arguments(description):
+    parser = argparse.ArgumentParser(description)
+    parser.add_argument('train', type = LabeledData.from_file, 
+        help = 'training data')
+    parser.add_argument('validation', type = LabeledData.from_file,
+        help = 'validation data')
+    parser.add_argument('type', choices = ['lg', 'nn'], 
+        help = 'Classifier type: logistic regression or neural network')
+    parser.add_argument('model', help = 'Trained model file')
+    parser.add_argument('--classes', type = int, 
+        help = 'number of classes, default is the number of unique labels in training')
+    parser.add_argument('--l1', type = float, default = 0.0, help = 'L1 regularization constant')
+    parser.add_argument('--l2', type = float, default = 0.0, help = 'L2 regularization constant')
+    parser.add_argument('--hidden', type = int, default = 1000,
+        help = 'Number of neural network hidden nodes')
+    parser.add_argument('--batch', type = int, default = 100, help = 'batch size')
+    parser.add_argument('--epochs', type = int, default = 1000, help = 'maximum training epochs')
+    parser.add_argument('--patience', type = int,
+        help = 'number of training examples to see before an early stop, default is the entire set')
+    parser.add_argument('--frequency', type = int,
+        help = 'how often to check the validation set, default is once per epoch')
+    parser.add_argument('--rate', type = float, default = 0.13, help = 'learning rate')
+    parser.add_argument('--log', default = 'CRITICAL', help = 'logging level')
+
+    args = parser.parse_args()
+    if args.classes == None:
+        args.classes = args.train.classes()
+    args.classifier = {
+        'lg':LogisticRegression(args.train.dim(), args.classes, args.l1, args.l2),
+        'nn':NeuralNetwork(args.train.dim(), args.classes, args.hidden, args.l1, args.l2)
+    }[args.type]
+
+    return args
+
+
 class LabeledData(object):
     """
     A set of training example vectors with associated labels
     """
+    @classmethod
+    def from_file(cls, filename):
+        with gzip.open(filename) as f:
+            x, y = cPickle.load(f)
+            return cls(y, x)
+
     def __init__(self, y, x):
         assert y.shape[0] == x.shape[0], \
             "Unmatched number of labels (%d) and training points (%d)" % (y.shape[0], x.shape[0])

@@ -1,62 +1,21 @@
 #!/usr/bin/env python
 
-import argparse
 import cPickle
-from dorado import LabeledData, sgd_train
-from dorado import LogisticRegression, NeuralNetwork
+from dorado import sgd_train, model_training_arguments
 import gzip
 import logging
 
 
-parser = argparse.ArgumentParser(
-    description = "Train a classifier using stochastic gradient descent.")
-parser.add_argument('train', help = 'training data')
-parser.add_argument('validation', help = 'validation data')
-parser.add_argument('type', choices = ['lg', 'nn'], 
-    help = 'Classifier type: logistic regression or neural network')
-parser.add_argument('model', help = 'Trained model file')
-parser.add_argument('--classes', type = int, 
-    help = 'number of classes, default is the number of unique labels in training')
-parser.add_argument('--l1', type = float, default = 0.0, help = 'L1 regularization constant')
-parser.add_argument('--l2', type = float, default = 0.0, help = 'L2 regularization constant')
-parser.add_argument('--hidden', type = int, default = 1000,
-    help = 'Number of neural network hidden nodes')
-parser.add_argument('--batch', type = int, default = 100, help = 'batch size')
-parser.add_argument('--epochs', type = int, default = 1000, help = 'maximum training epochs')
-parser.add_argument('--patience', type = int,
-    help = 'number of training examples to see before an early stop, default is the entire set')
-parser.add_argument('--frequency', type = int,
-    help = 'how often to check the validation set, default is once per epoch')
-parser.add_argument('--rate', type = float, default = 0.13, help = 'learning rate')
-parser.add_argument('--log', default = 'CRITICAL', help = 'logging level')
-args = parser.parse_args()
+args = model_training_arguments(
+    "Train a classifier using stochastic gradient descent.")
 
 logging.basicConfig(format='%(asctime)s %(message)s', 
     level = getattr(logging, args.log.upper()))
 
-# Read in data.
-with gzip.open(args.train) as f:
-    train_set = cPickle.load(f)
-
-with gzip.open(args.validation) as f:
-    valid_set = cPickle.load(f)
-
-training_set = LabeledData(train_set[1], train_set[0])
-validation_set = LabeledData(valid_set[1], valid_set[0])
-
 # Train the model.
-if args.classes == None:
-    classes = training_set.classes()
-else:
-    classes = args.classes
-classifier = {
-    'lg':LogisticRegression(training_set.dim(), classes, args.l1, args.l2),
-    'nn':NeuralNetwork(training_set.dim(), classes, args.hidden, args.l1, args.l2)
-}[args.type]
-
 model = sgd_train(
-        classifier, 
-        training_set, validation_set,
+        args.classifier,
+        args.train, args.validation,
         args.batch, args.patience, args.epochs, args.rate, args.frequency
     )
 
