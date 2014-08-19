@@ -13,9 +13,8 @@ from theano import function, shared
 
 def model_training_arguments(description):
     parser = argparse.ArgumentParser(description)
-    parser.add_argument('train', type = LabeledData.from_file, 
-        help = 'training data')
-    parser.add_argument('validation', type = LabeledData.from_file,
+    parser.add_argument('train', type = load_compressed, help = 'training data')
+    parser.add_argument('validation', type = load_compressed,
         help = 'validation data')
     parser.add_argument('type', choices = ['lg', 'nn'], 
         help = 'Classifier type: logistic regression or neural network')
@@ -58,12 +57,6 @@ class LabeledData(object):
     """
     A set of training example vectors with associated labels
     """
-    @classmethod
-    def from_file(cls, filename):
-        with gzip.open(filename) as f:
-            x, y = cPickle.load(f)
-            return cls(y, x)
-
     def __init__(self, y, x):
         assert y.shape[0] == x.shape[0], \
             "Unmatched number of labels (%d) and training points (%d)" % (y.shape[0], x.shape[0])
