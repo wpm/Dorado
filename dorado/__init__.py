@@ -126,6 +126,7 @@ def average_models(models):
         p.set_value(v)
     return averaged_model
 
+
 class Classifier(object):
     """An abstract machine learning classifier"""
 
@@ -167,6 +168,25 @@ class Classifier(object):
             self.l1 * np.abs(p.flatten()).sum() + 
             self.l2 * (p.flatten() ** 2).sum()
             for p in self.regularized_parameters()])
+
+    def zero(self):
+        for p in self.parameters():
+            z = np.zeros(p.get_value().shape)
+            p.set_value(z)
+        return self
+
+    def __add__(self, other):
+        sum = deepcopy(self)
+        ps = zip(self.parameters(), other.parameters())
+        new_values = [a.get_value() + b.get_value() for (a,b) in ps]
+        for p,v in zip(sum.parameters(), new_values):
+            p.set_value(v)
+        return sum
+
+    def __div__(self, k):
+        for p in self.parameters():
+            p.set_value(p.get_value()/k)
+        return self
 
 
 def sgd_train(model, training_set, validation_set, batch_size, patience_rate,
