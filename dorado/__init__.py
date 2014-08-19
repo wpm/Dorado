@@ -45,6 +45,14 @@ def model_training_arguments(description):
 
     return args
 
+def load_compressed(filename):
+    with gzip.open(filename) as file:
+        return cPickle.load(file)
+
+def dump_compressed(obj, filename):
+    with gzip.open(filename, 'w') as file:
+        return cPickle.dump(obj, file)
+
 
 class LabeledData(object):
     """
