@@ -5,6 +5,7 @@ import gzip
 import logging
 from math import sqrt
 import numpy as np
+import operator
 import theano.tensor as T
 import theano
 from theano import function, shared
@@ -114,17 +115,19 @@ def random_matrix(r, c, b = 1):
     """
     return np.random.uniform(-b, b, (r, c))
 
-def average_models(models):
-    # List of list of model parameters.
-    ps = zip(*[model.parameters() for model in models])
-    # Take the mean of each parameter.
-    ms = [np.mean([m.get_value() for m in p], axis = 0) for p in ps]
-    # Make a copy of the first model and assigned the averaged parameter
-    # values to it.
-    averaged_model = deepcopy(models[0])
-    for p,v in zip(averaged_model.parameters(), ms):
-        p.set_value(v)
-    return averaged_model
+
+def parallel_train(sc, model, training_data, batch_size, rate):
+    def map_train(batch):
+        model.sgd_training_iteration(batch.y, batch.x, rate)
+        return model
+
+    zero = sc.broadcast(deepcopy(model).zero())
+    batches = sc.broadcast(training_data.partition(batch_size))
+    k = len(batches.value)
+    while True:
+        ensemble = sc.parallelize(batches.value)
+        model = ensemble.map(map_train).fold(zero.value, operator.add) / k
+        yield model
 
 
 class Classifier(object):
