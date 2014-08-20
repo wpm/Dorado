@@ -1,0 +1,14 @@
+#!/usr/bin/env python
+
+import argparse
+import dorado
+
+parser = argparse.ArgumentParser("Run a model on labeled data")
+parser.add_argument('model', help = 'zipped model file')
+parser.add_argument('data', help = 'labeled data')
+args = parser.parse_args()
+
+model = dorado.load_compressed(args.model)
+data = dorado.load_compressed(args.data)
+
+print("Error rate %04f" % model.error_rate(data.y, data.x))

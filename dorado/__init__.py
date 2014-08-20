@@ -5,7 +5,6 @@ import gzip
 import logging
 from math import sqrt
 import numpy as np
-import operator
 import theano.tensor as T
 import theano
 from theano import function, shared
@@ -26,10 +25,13 @@ def model_training_arguments(description):
     parser.add_argument('--hidden', type = int, default = 1000,
         help = 'Number of neural network hidden nodes')
     parser.add_argument('--batch', type = int, default = 100, help = 'batch size')
-    parser.add_argument('--epochs', type = int, default = 1000, help = 'maximum training epochs')
-    parser.add_argument('--patience', type = int,
-        help = 'number of training examples to see before an early stop, default is the entire set')
-    parser.add_argument('--frequency', type = int,
+    parser.add_argument('--max-epochs', dest = 'max_epochs', type = int, default = np.inf,
+        help = 'maximum training epochs')
+    parser.add_argument('--min-epochs', dest = 'min_epochs', type = int, default = 1,
+        help = 'minimum training epochs')
+    parser.add_argument('--patience', type = int, default = 1,
+        help = 'number of epochs to see before an early stop, default is the entire set')
+    parser.add_argument('--frequency', type = int, default = 1,
         help = 'how often to check the validation set, default is once per epoch')
     parser.add_argument('--rate', type = float, default = 0.13, help = 'learning rate')
     parser.add_argument('--log', default = 'CRITICAL', help = 'logging level')
@@ -114,38 +116,6 @@ def random_matrix(r, c, b = 1):
     :returns: randomly generated matrix
     """
     return np.random.uniform(-b, b, (r, c))
-
-
-def parallel_train(sc, model, training_data, batch_size, rate):
-    def map_train(batch):
-        model.sgd_training_iteration(batch.y, batch.x, rate)
-        return model
-
-    zero = sc.broadcast(deepcopy(model).zero())
-    batches = sc.broadcast(training_data.partition(batch_size))
-    k = len(batches.value)
-    while True:
-        ensemble = sc.parallelize(batches.value)
-        model = ensemble.map(map_train).fold(zero.value, operator.add) / k
-        yield model
-
-
-def train(epochs, validation_data, min_epochs = 1, freq = 1, patience = 1):
-    best_error = np.inf
-    best_model = None
-    wait = patience
-    for epoch, model in enumerate(epochs, 1):
-        if epoch > min_epochs and epoch % freq == 0:
-            e = model.error_rate(validation_data.y, validation_data.x)
-            logging.info("%d. %04f" % (epoch, e))
-            if e < best_error:
-                best_error = e
-                best_model = deepcopy(model)
-                wait = patience
-            elif wait == 0:
-                break
-        wait -= 1
-    return best_error, best_model
 
 
 class Classifier(object):
