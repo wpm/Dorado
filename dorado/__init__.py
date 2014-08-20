@@ -130,6 +130,24 @@ def parallel_train(sc, model, training_data, batch_size, rate):
         yield model
 
 
+def train(epochs, validation_data, min_epochs = 1, freq = 1, patience = 1):
+    best_error = np.inf
+    best_model = None
+    wait = patience
+    for epoch, model in enumerate(epochs, 1):
+        if epoch > min_epochs and epoch % freq == 0:
+            e = model.error_rate(validation_data.y, validation_data.x)
+            logging.info("%d. %04f" % (epoch, e))
+            if e < best_error:
+                best_error = e
+                best_model = deepcopy(model)
+                wait = patience
+            elif wait == 0:
+                break
+        wait -= 1
+    return best_error, best_model
+
+
 class Classifier(object):
     """An abstract machine learning classifier"""
 
