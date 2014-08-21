@@ -8,7 +8,9 @@ def train():
     """Train a classifier using stochastic gradient descent."""
     args = dorado.model_training_arguments(train.__doc__)
 
-    logging.basicConfig(format='%(asctime)s %(message)s', 
+    logging.basicConfig(
+        format='%(levelname)s %(asctime)s %(message)s',
+        datefmt='%m/%d/%Y %I:%M:%S',
         level = getattr(logging, args.log.upper()))
 
     iterations = dorado.train.sequential_iterations(
