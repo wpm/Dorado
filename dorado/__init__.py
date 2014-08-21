@@ -2,7 +2,6 @@ import argparse
 from copy import deepcopy
 import cPickle
 import gzip
-import logging
 from math import sqrt
 import numpy as np
 import theano.tensor as T
@@ -30,9 +29,9 @@ def model_training_arguments(description):
     parser.add_argument('--min-epochs', dest = 'min_epochs', type = int, default = 1,
         help = 'minimum training epochs')
     parser.add_argument('--patience', type = int, default = 1,
-        help = 'number of epochs to see before an early stop, default is the entire set')
+        help = 'number of epochs to see before an early stop, default is one')
     parser.add_argument('--frequency', type = int, default = 1,
-        help = 'how often to check the validation set, default is once per epoch')
+        help = 'how often to check the validation set, default every epoch')
     parser.add_argument('--rate', type = float, default = 0.13, help = 'learning rate')
     parser.add_argument('--log', default = 'CRITICAL', help = 'logging level')
 
@@ -178,47 +177,6 @@ class Classifier(object):
         for p in self.parameters():
             p.set_value(p.get_value()/k)
         return self
-
-
-def sgd_train(model, training_set, validation_set, batch_size, patience_rate,
-                epochs, rate, validation_frequency):
-    logging.info(model)
-    logging.info("Train on %d labeled examples" % len(training_set))
-    # The default patience rate and validation frequency are both a single epoch.
-    if patience_rate == None:
-        patience_rate = len(training_set)
-    if validation_frequency == None:
-        validation_frequency = len(training_set)/batch_size
-    training_set = training_set.shuffle()
-    batches = training_set.partition(batch_size)
-    patience = patience_rate
-    training_points = 0
-    iterations = 0
-    best_error_rate = np.inf
-    early_stop = False
-    epoch = 0
-    best_model = model
-    while epoch < epochs and not early_stop:
-        epoch += 1
-        logging.info("Epoch %d" % epoch)
-        for b, batch in enumerate(batches):
-            logging.debug("Batch %d" % (b + 1))
-            iterations += 1
-            p = model.sgd_training_iteration(batch.y, batch.x, rate)
-            logging.debug("Training cost %04f" % p)
-            training_points += len(batch)
-            if iterations % validation_frequency == 0:
-                error_rate = model.error_rate(validation_set.y, validation_set.x)
-                logging.info("%d. Validation error rate %04f" % (iterations, error_rate))
-                if error_rate < best_error_rate:
-                    best_error_rate = error_rate
-                    best_model = deepcopy(model)
-                    patience = training_points + patience_rate
-                elif training_points > patience:
-                    early_stop = True
-                    break
-    logging.info("Best validation error rate %04f" % best_error_rate)
-    return best_model, best_error_rate
 
 
 class LogisticRegression(Classifier):
