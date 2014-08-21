@@ -14,10 +14,10 @@ def train():
         level = getattr(logging, args.log.upper()))
 
     iterations = dorado.train.sequential_iterations(
-        args.classifier, args.train, args.batch, args.rate)
+        args.classifier, args.train, args.batch, args.rate, args.shuffle)
     model = dorado.train.train(
         iterations, args.validation, args.min_epochs, args.max_epochs,
-        args.frequency, args.patience)[1]
+        args.frequency, args.patience, args.shuffle)[1]
 
     dorado.dump_compressed(model, args.model)
     logging.info("Created model %s" % args.model)

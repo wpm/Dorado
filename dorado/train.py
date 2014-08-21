@@ -4,7 +4,10 @@ import numpy as np
 import operator
 
 
-def train(iterations, validation_data, min_epochs = 1, max_epochs = np.inf, freq = 1, patience = 1):
+def train(iterations, validation_data, min_epochs = 1, max_epochs = np.inf, 
+            freq = 1, patience = 1, shuffle = True):
+    if shuffle:
+        validation_data = validation_data.shuffle()
     best_error = np.inf
     best_model = None
     wait = patience
@@ -25,7 +28,9 @@ def train(iterations, validation_data, min_epochs = 1, max_epochs = np.inf, freq
     return best_error, best_model
 
 
-def sequential_iterations(model, training_data, batch_size, rate):
+def sequential_iterations(model, training_data, batch_size, rate, shuffle):
+    if shuffle:
+        training_data = training_data.shuffle()
     epoch = 1
     batches = training_data.partition(batch_size)
     while True:

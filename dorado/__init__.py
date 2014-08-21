@@ -15,8 +15,10 @@ def model_training_arguments(description):
     parser.add_argument('model', help = 'Trained model file')
     parser.add_argument('--classes', type = int, 
         help = 'number of classes, default is the number of unique labels in training')
-    parser.add_argument('--l1', type = float, default = 0.0, help = 'L1 regularization constant')
-    parser.add_argument('--l2', type = float, default = 0.0, help = 'L2 regularization constant')
+    parser.add_argument('--l1', type = float, default = 0.0,
+        help = 'L1 regularization constant')
+    parser.add_argument('--l2', type = float, default = 0.0,
+        help = 'L2 regularization constant')
     parser.add_argument('--hidden', type = int, default = 1000,
         help = 'Number of neural network hidden nodes')
     parser.add_argument('--batch', type = int, default = 100, help = 'batch size')
@@ -28,7 +30,10 @@ def model_training_arguments(description):
         help = 'number of epochs to see before an early stop, default is one')
     parser.add_argument('--frequency', type = int, default = 1,
         help = 'how often to check the validation set, default every epoch')
-    parser.add_argument('--rate', type = float, default = 0.13, help = 'learning rate')
+    parser.add_argument('--rate', type = float, default = 0.13,
+            help = 'learning rate')
+    parser.add_argument('--shuffle', type = bool, default = True,
+        help = 'randomly shuffle data')
     parser.add_argument('--log', default = 'CRITICAL', help = 'logging level')
 
     args = parser.parse_args()
@@ -91,5 +96,7 @@ class LabeledData(object):
         return batches
 
     def shuffle(self):
-        # TODO Randomly shuffle the data.
-        return LabeledData(self.y, self.x)
+        """Randomly shuffle this data set"""
+        i = np.arange(len(self))
+        np.random.shuffle(i)
+        return LabeledData(self.y[i], self.x[i])
