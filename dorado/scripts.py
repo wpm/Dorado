@@ -45,6 +45,7 @@ def distributed_train():
 
     dorado.dump_compressed(model, args.model)
     logging.info("Created model %s" % args.model)
+    return 0
 
 
 def test():
