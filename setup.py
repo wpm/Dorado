@@ -6,7 +6,10 @@ setup(
     author='W.P. McNeill',
     author_email='billmcn@gmail.com',
     packages=['dorado'],
-    scripts=['bin/train_digits','bin/test'],
+    scripts=[
+        'dorado_distributed_train.py', 
+        'dorado_test', 'dorado_train',
+        'download_mnist_digits_dataset'],
     url='https://github.com/wpm/Dorado',
     description='Machine learning with Theano',
     long_description=open('README').read(),
