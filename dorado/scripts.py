@@ -25,7 +25,7 @@ def train():
 
 
 def distributed_train():
-    """Train a classifier using stochastic gradient descent onx Spark."""
+    """Train a classifier using stochastic gradient descent on Spark."""
     args = dorado.model_training_arguments(distributed_train.__doc__)
 
     try:

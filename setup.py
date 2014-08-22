@@ -12,7 +12,6 @@ setup(
     entry_points = {
         'console_scripts': [
             'dorado_train = dorado.scripts:train',
-            'dorado_distributed_train = dorado.scripts:distributed_train',
             'dorado_test = dorado.scripts:test',
             'dorado_download_mnist_digits = dorado.scripts:download_mnist_digits'
         ],
