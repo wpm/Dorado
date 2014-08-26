@@ -38,3 +38,5 @@ class Embedding(object):
 
 	def __getitem__(self, items):
 		return self.C.get_value()[self.index[items]].flatten()
+
+# embeddings = self.C[X].reshape((X.shape[0], -1))
