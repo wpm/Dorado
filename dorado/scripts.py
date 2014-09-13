@@ -50,7 +50,7 @@ def command_line():
     test_parser.add_argument('data', help='labeled data')
     # Fetch
     fetch_parser = subparsers.add_parser('fetch')
-    fetch_parser.add_argument('download', default='.',
+    fetch_parser.add_argument('--destination', default='.',
                               help='Download destination, default current directory')
     args = parser.parse_args()
 
@@ -58,7 +58,7 @@ def command_line():
         return train(args)
     elif 'model' in args:
         return test(args)
-    elif 'download' in args:
+    elif 'destination' in args:
         return download_mnist_digits(args)
     else:
         raise Exception("Invalid parsed arguments %s" % args)
@@ -120,7 +120,11 @@ def download_mnist_digits(args):
     Write it to mnist.train.pkl.gz, mnist.test.pkl.gz, and mnist.valid.pkl.gz
     files in the specified directory.
     """
-    os.makedirs(args.download)
+    try:
+        os.makedirs(args.destination)
+    except OSError:
+        if not os.path.isdir(args.destination):
+            raise
     origin = 'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'
     logging.info("Download %s" % origin)
     filename = urllib.urlretrieve(origin)[0]
@@ -128,7 +132,7 @@ def download_mnist_digits(args):
     train_set, valid_set, test_set = dorado.load_compressed(filename)
 
     for data, name in zip([train_set, valid_set, test_set], ['train', 'valid', 'test']):
-        n = os.path.join(args.download, "mnist.%s.pkl.gz" % name)
+        n = os.path.join(args.destination, "mnist.%s.pkl.gz" % name)
         logging.info("Write %s" % n)
         x, y = data
         dorado.dump_compressed(dorado.LabeledData(y, x), n)
