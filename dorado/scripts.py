@@ -12,11 +12,11 @@ import dorado.train
 
 def command_line():
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest = 'command')
     # Shared
     parser.add_argument("--log", default='INFO', help="logging level")
     # Train
-    train_parser = subparsers.add_parser('train')
+    train_parser = subparsers.add_parser('train', help = 'Train a model')
     train_parser.add_argument('train', type=load_compressed, help='training data')
     train_parser.add_argument('validation', type=load_compressed,
                               help='validation data')
@@ -45,11 +45,11 @@ def command_line():
     train_parser.add_argument('--shuffle', type=bool, default=True,
                               help='randomly shuffle data')
     # Test
-    test_parser = subparsers.add_parser('test')
+    test_parser = subparsers.add_parser('test', help = 'Apply a model')
     test_parser.add_argument('model', help='zipped model file')
     test_parser.add_argument('data', help='labeled data')
     # Fetch
-    fetch_parser = subparsers.add_parser('fetch')
+    fetch_parser = subparsers.add_parser('fetch', help = 'Fetch data')
     fetch_parser.add_argument('--destination', default='.',
                               help='Download destination, default current directory')
     args = parser.parse_args()
@@ -59,11 +59,11 @@ def command_line():
         datefmt='%m/%d/%Y %I:%M:%S',
         level=getattr(logging, args.log.upper()))
 
-    if 'train' in args:
+    if args.command == 'train':
         return train(args)
-    elif 'model' in args:
+    elif args.command == 'test':
         return test(args)
-    elif 'destination' in args:
+    elif args.command == 'fetch':
         return download_mnist_digits(args)
     else:
         raise Exception("Invalid parsed arguments %s" % args)
