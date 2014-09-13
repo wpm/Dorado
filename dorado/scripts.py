@@ -54,6 +54,11 @@ def command_line():
                               help='Download destination, default current directory')
     args = parser.parse_args()
 
+    logging.basicConfig(
+        format='%(levelname)s %(asctime)s %(message)s',
+        datefmt='%m/%d/%Y %I:%M:%S',
+        level=getattr(logging, args.log.upper()))
+
     if 'train' in args:
         return train(args)
     elif 'model' in args:
