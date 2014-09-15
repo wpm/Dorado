@@ -1,14 +1,15 @@
 from copy import deepcopy
 import logging
-import numpy as np
 import operator
 
+import numpy as np
 
-def train(iterations, validation_data, min_epochs = 1, max_epochs = np.inf, 
-            freq = 1, patience = 1, shuffle = True):
+
+def train(iterations, validation_data, min_epochs=1, max_epochs=np.inf,
+          freq=1, patience=1, shuffle=True):
     logging.info("Begin training")
     if shuffle:
-        logging.info("Shuffle data")
+        logging.info("Shuffle validation data")
         validation_data = validation_data.shuffle()
     best_error = np.inf
     best_model = None
@@ -26,12 +27,13 @@ def train(iterations, validation_data, min_epochs = 1, max_epochs = np.inf,
             elif wait == 0:
                 break
         wait -= 1
-    logging.info("Training complete. Best error %04f" % best_error)
+    logging.info("Best error %04f" % best_error)
     return best_error, best_model
 
 
 def sequential_iterations(model, training_data, batch_size, rate, shuffle):
     if shuffle:
+        logging.info("Shuffle training data")
         training_data = training_data.shuffle()
     epoch = 1
     batches = training_data.partition(batch_size)

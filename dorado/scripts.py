@@ -2,6 +2,8 @@ import argparse
 import logging
 import urllib
 import os.path
+import subprocess
+import sys
 
 import numpy as np
 
@@ -10,13 +12,17 @@ from dorado.classifier import LogisticRegression, NeuralNetwork
 import dorado.train
 
 
-def command_line():
+def command_line(spark=False):
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest = 'command')
+    subparsers = parser.add_subparsers(dest='command')
     # Shared
     parser.add_argument("--log", default='INFO', help="logging level")
+    parser.add_argument('--spark-url', dest='spark_url',
+                        help='Spark cluster URL, default local')
+    parser.add_argument('--spark-submit', dest='spark_submit', default='spark-submit',
+                        help='Spark cluster URL, default local')
     # Train
-    train_parser = subparsers.add_parser('train', help = 'Train a model')
+    train_parser = subparsers.add_parser('train', help='Train a model')
     train_parser.add_argument('train', type=load_compressed, help='training data')
     train_parser.add_argument('validation', type=load_compressed,
                               help='validation data')
@@ -45,22 +51,32 @@ def command_line():
     train_parser.add_argument('--shuffle', type=bool, default=True,
                               help='randomly shuffle data')
     # Test
-    test_parser = subparsers.add_parser('test', help = 'Apply a model')
+    test_parser = subparsers.add_parser('test', help='Apply a model')
     test_parser.add_argument('model', help='zipped model file')
     test_parser.add_argument('data', help='labeled data')
     # Fetch
-    fetch_parser = subparsers.add_parser('fetch', help = 'Fetch data')
+    fetch_parser = subparsers.add_parser('fetch', help='Fetch data')
     fetch_parser.add_argument('--destination', default='.',
                               help='Download destination, default current directory')
     args = parser.parse_args()
 
     logging.basicConfig(
-        format='%(levelname)s %(asctime)s %(message)s',
-        datefmt='%m/%d/%Y %I:%M:%S',
+        format='%(asctime)s %(levelname)s %(module)s: %(message)s',
+        datefmt='%d/%m/%y %I:%M:%S',
         level=getattr(logging, args.log.upper()))
 
+    if not spark and args.spark_url:
+        this_file = __file__
+        if this_file.endswith("c"):
+            this_file = this_file[:-1]
+        cmd = [args.spark_submit, this_file] + sys.argv[1:]
+        logging.info("Spark submit '%s' to %s" % (" ".join(cmd), args.spark_url))
+        return subprocess.call(cmd)
     if args.command == 'train':
-        return train(args)
+        if spark:
+            spark_train(args)
+        else:
+            return train(args)
     elif args.command == 'test':
         return test(args)
     elif args.command == 'fetch':
@@ -69,17 +85,20 @@ def command_line():
         raise Exception("Invalid parsed arguments %s" % args)
 
 
-def train(args):
-    """Train a classifier using stochastic gradient descent."""
+def _classifier(args):
     if args.classes == None:
         args.classes = args.train.classes()
-    args.classifier = {
+    return {
         'lg': LogisticRegression(args.train.dim(), args.classes, args.l1, args.l2),
         'nn': NeuralNetwork(args.train.dim(), args.classes, args.hidden, args.l1, args.l2)
     }[args.type]
 
+
+def train(args):
+    """Train a classifier using stochastic gradient descent."""
+    classifier = _classifier(args)
     iterations = dorado.train.sequential_iterations(
-        args.classifier, args.train, args.batch, args.rate, args.shuffle)
+        classifier, args.train, args.batch, args.rate, args.shuffle)
     model = dorado.train.train(
         iterations, args.validation, args.min_epochs, args.max_epochs,
         args.frequency, args.patience, args.shuffle)[1]
@@ -89,18 +108,18 @@ def train(args):
     return 0
 
 
-# TODO Add distributed training as a command line option
-def distributed_train(args):
+def spark_train(args):
     """Train a classifier using stochastic gradient descent on Spark."""
     try:
         from pyspark import SparkContext
     except ImportError:
         raise Exception("Run this with spark-submit")
 
-    sc = SparkContext("local", "Distributed Training")
+    sc = SparkContext(args.spark_url, "Dorado Training")
 
+    classifier = _classifier(args)
     iterations = dorado.train.parallel_iterations(
-        sc, args.classifier, args.train, args.batch, args.rate)
+        sc, classifier, args.train, args.batch, args.rate)
     model = dorado.train.train(
         iterations, args.validation, args.min_epochs, args.max_epochs,
         args.frequency, args.patience)[1]
@@ -143,3 +162,7 @@ def download_mnist_digits(args):
         dorado.dump_compressed(dorado.LabeledData(y, x), n)
 
     return 0
+
+
+if __name__ == '__main__':
+    command_line(True)
