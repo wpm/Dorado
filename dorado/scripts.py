@@ -17,10 +17,9 @@ def command_line(spark=False):
     subparsers = parser.add_subparsers(dest='command')
     # Shared
     parser.add_argument("--log", default='INFO', help="logging level")
-    parser.add_argument('--spark-url', dest='spark_url',
-                        help='Spark cluster URL, default local')
+    parser.add_argument('--spark-url', dest='spark_url', help='Spark cluster URL')
     parser.add_argument('--spark-submit', dest='spark_submit', default='spark-submit',
-                        help='Spark cluster URL, default local')
+                        help='Path to spark-submit script, default spark-submit')
     # Train
     train_parser = subparsers.add_parser('train', help='Train a model')
     train_parser.add_argument('train', type=load_compressed, help='training data')
@@ -67,7 +66,7 @@ def command_line(spark=False):
 
     if not spark and args.spark_url:
         this_file = __file__
-        if this_file.endswith("c"):
+        if this_file.endswith("c"):  # .py vs. .pyc
             this_file = this_file[:-1]
         cmd = [args.spark_submit, this_file] + sys.argv[1:]
         logging.info("Spark submit '%s' to %s" % (" ".join(cmd), args.spark_url))
@@ -165,4 +164,5 @@ def download_mnist_digits(args):
 
 
 if __name__ == '__main__':
+    # This file is passed as a script argument to spark-submit
     command_line(True)
