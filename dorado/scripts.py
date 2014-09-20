@@ -2,8 +2,6 @@ import argparse
 import logging
 import urllib
 import os.path
-import subprocess
-import sys
 
 import numpy as np
 
@@ -12,14 +10,15 @@ from dorado.classifier import LogisticRegression, NeuralNetwork
 import dorado.train
 
 
-def command_line(spark=False):
-    parser = argparse.ArgumentParser()
+def command_line():
+    doc = """Machine Learning with Theano
+
+Spark script is: %s
+""" % (os.path.abspath(os.path.join(os.path.dirname(__file__), 'spark.py')))
+    parser = argparse.ArgumentParser(doc)
     subparsers = parser.add_subparsers(dest='command')
     # Shared
     parser.add_argument("--log", default='INFO', help="logging level")
-    parser.add_argument('--spark-url', dest='spark_url', help='Spark cluster URL')
-    parser.add_argument('--spark-submit', dest='spark_submit', default='spark-submit',
-                        help='Path to spark-submit script, default spark-submit')
     # Train
     train_parser = subparsers.add_parser('train', help='Train a model')
     train_parser.add_argument('train', type=load_compressed, help='training data')
@@ -57,31 +56,7 @@ def command_line(spark=False):
     fetch_parser = subparsers.add_parser('fetch', help='Fetch data')
     fetch_parser.add_argument('--destination', default='.',
                               help='Download destination, default current directory')
-    args = parser.parse_args()
-
-    logging.basicConfig(
-        format='%(asctime)s %(levelname)s %(module)s: %(message)s',
-        datefmt='%d/%m/%y %I:%M:%S',
-        level=getattr(logging, args.log.upper()))
-
-    if not spark and args.spark_url:
-        this_file = __file__
-        if this_file.endswith("c"):  # .py vs. .pyc
-            this_file = this_file[:-1]
-        cmd = [args.spark_submit, this_file] + sys.argv[1:]
-        logging.info("Spark submit '%s' to %s" % (" ".join(cmd), args.spark_url))
-        return subprocess.call(cmd)
-    if args.command == 'train':
-        if spark:
-            spark_train(args)
-        else:
-            return train(args)
-    elif args.command == 'test':
-        return test(args)
-    elif args.command == 'fetch':
-        return download_mnist_digits(args)
-    else:
-        raise Exception("Invalid parsed arguments %s" % args)
+    return parser
 
 
 def _classifier(args):
@@ -91,6 +66,28 @@ def _classifier(args):
         'lg': LogisticRegression(args.train.dim(), args.classes, args.l1, args.l2),
         'nn': NeuralNetwork(args.train.dim(), args.classes, args.hidden, args.l1, args.l2)
     }[args.type]
+
+
+def run(spark=False):
+    parser = command_line()
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)s %(module)s: %(message)s',
+        datefmt='%d/%m/%y %I:%M:%S',
+        level=getattr(logging, args.log.upper()))
+
+    if args.command == 'train':
+        if spark:
+            return spark_train(args)
+        else:
+            return train(args)
+    elif args.command == 'test':
+        return test(args)
+    elif args.command == 'fetch':
+        return download_mnist_digits(args)
+    else:
+        raise Exception("Invalid parsed arguments %s" % args)
 
 
 def train(args):
@@ -114,7 +111,7 @@ def spark_train(args):
     except ImportError:
         raise Exception("Run this with spark-submit")
 
-    sc = SparkContext(args.spark_url, "Dorado Training")
+    sc = SparkContext()
 
     classifier = _classifier(args)
     iterations = dorado.train.parallel_iterations(
@@ -161,8 +158,3 @@ def download_mnist_digits(args):
         dorado.dump_compressed(dorado.LabeledData(y, x), n)
 
     return 0
-
-
-if __name__ == '__main__':
-    # This file is passed as a script argument to spark-submit
-    command_line(True)

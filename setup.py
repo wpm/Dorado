@@ -12,13 +12,12 @@ setup(
     packages=find_packages(),
 
     entry_points={
-        'console_scripts': ['dorado = dorado.scripts:command_line']
+        'console_scripts': ['dorado = dorado.scripts:run']
     },
 
     install_requires=[
         'docutils>=0.3'
-        'theano',
-        'nltk'
+        'theano'
     ],
 
     package_data={
