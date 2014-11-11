@@ -1,4 +1,7 @@
-from dorado import scripts
+import dorado.cli
 
 if __name__ == "__main__":
-    scripts.run(True)
+    from pyspark import SparkContext
+
+    spark_context = SparkContext()
+    dorado.cli.run(spark_context)

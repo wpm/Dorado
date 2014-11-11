@@ -1,60 +1,59 @@
-from copy import deepcopy
+import copy
 import logging
 import operator
 
-import numpy as np
+import numpy
 
 
-def train(iterations, validation_data, min_epochs=1, max_epochs=np.inf,
-          freq=1, patience=1, shuffle=True):
-    logging.info("Begin training")
-    if shuffle:
-        logging.info("Shuffle validation data")
-        validation_data = validation_data.shuffle()
-    best_error = np.inf
-    best_model = None
+def train_model(epochs, model, train_data, validate_data, n, patience):
+    logging.info("Train %s: training %s, validation %s, %d batches, %d epochs patience" % \
+                 (model, train_data, validate_data, n, patience))
+    train_batches = list(train_data.shuffle().partition(n))
+    best_error = numpy.Inf
+    best_model = model
     wait = patience
-    for epoch, model in iterations:
-        if epoch > max_epochs:
-            break
-        if epoch > min_epochs and epoch % freq == 0:
-            e = model.error_rate(validation_data.y, validation_data.x)
-            logging.info("epoch = %d error = %04f" % (epoch, e))
-            if e < best_error:
-                best_error = e
-                best_model = deepcopy(model)
-                wait = patience
-            elif wait == 0:
+    logging.info("Initial validation error %0.4f" % model.error_rate(validate_data))
+    for i, model in enumerate(epochs(model, train_batches), 1):
+        validation_error = model.error_rate(validate_data)
+        logging.info("Epoch %d (%d), validation error %0.4f" % (i, wait, validation_error))
+        if validation_error >= best_error:
+            wait -= 1
+            if not wait:
                 break
-        wait -= 1
-    logging.info("Best error %04f" % best_error)
-    return best_error, best_model
+        else:
+            best_model = model
+            best_error = validation_error
+            wait = patience
+    return best_model, best_error
 
 
-def sequential_iterations(model, training_data, batch_size, rate, shuffle):
-    if shuffle:
-        logging.info("Shuffle training data")
-        training_data = training_data.shuffle()
-    epoch = 1
-    batches = training_data.partition(batch_size)
+def spark_averaged_epochs(spark_context, model, train_batches, **parameters):
+    logging.info("Optimization parameters: %s" % dictionary_as_string(parameters))
+    n = len(train_batches)
+    zero = spark_context.broadcast(model.zero())
     while True:
-        for batch in batches:
-            model.sgd_training_iteration(batch.y, batch.x, rate)
-        yield epoch, model
-        epoch += 1
+        model = spark_context.parallelize(train_batches). \
+            map(lambda batch: model.train(batch)).fold(zero.value, operator.add)
+        model /= n
+        yield model
 
 
-def parallel_iterations(sc, model, training_data, batch_size, rate):
-    def map_train(batch):
-        model.sgd_training_iteration(batch.y, batch.x, rate)
-        return model
-
-    epoch = 1
-    zero = sc.broadcast(deepcopy(model).zero())
-    batches = sc.broadcast(training_data.partition(batch_size))
-    k = len(batches.value)
+def averaged_epochs(model, train_batches, **parameters):
+    logging.info("Optimization parameters: %s" % dictionary_as_string(parameters))
+    n = len(train_batches)
     while True:
-        ensemble = sc.parallelize(batches.value)
-        model = ensemble.map(map_train).fold(zero.value, operator.add) / k
-        yield epoch, model
-        epoch += 1
+        model = reduce(operator.add, (model.train(batch) for batch in train_batches))
+        model /= n
+        yield model
+
+
+def serial_epochs(model, train_batches, **parameters):
+    logging.info("Optimization parameters: %s" % dictionary_as_string(parameters))
+    while True:
+        for batch in train_batches:
+            model = model.train(batch)
+        yield model
+
+
+def dictionary_as_string(d):
+    return ','.join(["%s=%s" % (k, v) for k, v in d.items()])
