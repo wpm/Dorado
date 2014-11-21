@@ -2,7 +2,6 @@ import itertools
 
 import numpy
 import theano
-
 import theano.tensor as T
 
 from dorado.model.model import Model
@@ -34,12 +33,9 @@ class TheanoModel(Model):
 
     def __eq__(self, other):
         for p_a, p_b in itertools.izip(self.parameters(), other.parameters()):
-            if not self._equal_parameters(p_a, p_b):
+            if not (p_a.get_value() == p_b.get_value()).all():
                 return False
         return self._l1 == other._l1 and self._l2 == other._l2
-
-    def _equal_parameters(self, a, b):
-        return (a.get_value() == b.get_value()).all()
 
     def dimension(self):
         return self._dimension
