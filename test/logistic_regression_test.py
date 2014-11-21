@@ -36,10 +36,10 @@ class LogisticRegressionTestCase(unittest.TestCase):
         mean = (m1 + m2) / 2
         self.assertEqual(mean, LogisticRegression.create(numpy.arange(4).reshape(2, 2) + 1, numpy.arange(2) + 1))
 
-    def test_something(self):
+    def test_training_iteration(self):
+        original = self.model.copy()
         model, error = train_model(averaged_epochs, self.model, self.train_data, self.validate_data, 4, 5)
-        print(model)
-        print(error)
+        self.assertNotEqual(original, model)
 
 
 if __name__ == '__main__':
