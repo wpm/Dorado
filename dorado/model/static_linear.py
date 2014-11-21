@@ -8,6 +8,10 @@ class StaticLinearModel(Model):
     """A linear model that does not change in response to training
     """
 
+    @classmethod
+    def random(cls, dimension, classes):
+        return cls(numpy.random.rand(dimension, classes), numpy.random.rand(classes))
+
     def __init__(self, W, b):
         self.W = W
         self.b = b
@@ -44,8 +48,8 @@ class StaticLinearModel(Model):
         return (n - correct) / n
 
     def _p_y_given_x(self, vectors):
-        transform = numpy.dot(vectors, self.W) + self.b
-        norm_transform = transform / transform.sum(axis=1)[:, numpy.newaxis]
+        p = numpy.dot(vectors, self.W) + self.b
+        norm_transform = p / p.sum(axis=1)[:, numpy.newaxis]
         return numpy.log(norm_transform)
 
     def _p(self, vectors, labels):

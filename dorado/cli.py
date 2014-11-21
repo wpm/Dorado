@@ -12,7 +12,7 @@ import numpy
 from dorado.data import LabeledData
 from dorado.model.logistic_regression import LogisticRegression
 from dorado.model.neural_network import NeuralNetwork
-from dorado.model.random import RandomModel
+from dorado.model.static_linear import StaticLinearModel
 from dorado.train import averaged_epochs, train_model, spark_averaged_epochs, serial_epochs
 
 
@@ -62,7 +62,7 @@ def run(spark_context=None):
         if not args.seed == None:
             numpy.random.seed(args.seed)
         if args.model_type == 'random':
-            model = RandomModel(args.training.dimension(), args.training.classes())
+            model = StaticLinearModel.random(args.training.dimension(), args.training.classes())
         elif args.model_type == 'logreg':
             model = LogisticRegression(args.training.dimension(), args.training.classes(), args.l1, args.l2)
         elif args.model_type == 'neural':

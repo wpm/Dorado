@@ -48,6 +48,10 @@ class StaticModelTestCase(unittest.TestCase):
         mean = (m1 + m2)/2
         self.assertEqual(mean, StaticLinearModel(numpy.arange(4).reshape(2, 2) + 1, numpy.arange(2) + 1))
 
+    def test_random(self):
+        r = StaticLinearModel.random(5, 10)
+        self.assertEqual(r.dimension(), 5)
+        self.assertEqual(r.classes(), 10)
 
 if __name__ == '__main__':
     unittest.main()
