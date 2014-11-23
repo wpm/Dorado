@@ -17,13 +17,19 @@ class Model(object):
     def __div__(self, n):
         raise NotImplementedError()
 
-    def train(self, data, **parameters):
-        raise NotImplementedError()
-
     def dimension(self):
         raise NotImplementedError()
 
     def classes(self):
+        raise NotImplementedError()
+
+    def train(self, data, **parameters):
+        raise NotImplementedError()
+
+    def parameter_values(self):
+        raise NotImplementedError()
+
+    def set_parameter_values(self, values):
         raise NotImplementedError()
 
     def error_rate(self, data):

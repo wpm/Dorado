@@ -2,6 +2,7 @@ import copy
 
 import numpy
 from dorado.model.model import Model
+from dorado.model.model_parameters import ModelParameters
 
 
 class StaticLinearModel(Model):
@@ -39,6 +40,14 @@ class StaticLinearModel(Model):
 
     def train(self, data, **parameters):
         return copy.deepcopy(self)
+
+    def parameter_values(self):
+        return ModelParameters(self.W.copy(), self.b.copy())
+
+    def set_parameter_values(self, values):
+        W, b = values.parameters
+        self.W = W.copy()
+        self.b = b.copy()
 
     def error_rate(self, data):
         p_y_x = self._p_y_given_x(data.vectors)

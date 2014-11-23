@@ -2,6 +2,7 @@ import unittest
 import numpy
 from dorado.data import LabeledData
 from dorado.model.logistic_regression import LogisticRegression
+from dorado.model.model_parameters import ModelParameters
 from dorado.train import train_model, averaged_epochs
 
 
@@ -29,6 +30,7 @@ class LogisticRegressionTestCase(unittest.TestCase):
             numpy.array([1, 0])
         )
         self.model = LogisticRegression(self.train_data.dimension(), self.validate_data.classes())
+        self.parameter_set = ModelParameters(numpy.arange(4).reshape(2, 2), numpy.arange(2))
 
     def test_average(self):
         m1 = LogisticRegression.create(numpy.arange(4).reshape(2, 2), numpy.arange(2))
@@ -40,6 +42,16 @@ class LogisticRegressionTestCase(unittest.TestCase):
         original = self.model.copy()
         model, error = train_model(averaged_epochs, self.model, self.train_data, self.validate_data, 4, 5)
         self.assertNotEqual(original, model)
+
+    def test_model_parameters(self):
+        model = LogisticRegression.create(numpy.arange(4).reshape(2, 2), numpy.arange(2))
+        actual = model.parameter_values()
+        expected = self.parameter_set
+        self.assertEqual(actual, expected)
+
+    def test_set_model_parameters(self):
+        self.model.set_parameter_values(self.parameter_set)
+        self.assertEqual(self.model.parameter_values(), self.parameter_set)
 
 
 if __name__ == '__main__':

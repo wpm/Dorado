@@ -2,6 +2,7 @@ import unittest
 
 import numpy
 import numpy.testing
+from dorado.model.model_parameters import ModelParameters
 
 from dorado.model.static_linear import StaticLinearModel
 
@@ -45,13 +46,28 @@ class StaticModelTestCase(unittest.TestCase):
     def test_average(self):
         m1 = StaticLinearModel(numpy.arange(4).reshape(2, 2), numpy.arange(2))
         m2 = StaticLinearModel(numpy.arange(4).reshape(2, 2) + 2, numpy.arange(2) + 2)
-        mean = (m1 + m2)/2
+        mean = (m1 + m2) / 2
         self.assertEqual(mean, StaticLinearModel(numpy.arange(4).reshape(2, 2) + 1, numpy.arange(2) + 1))
 
     def test_random(self):
         r = StaticLinearModel.random(5, 10)
         self.assertEqual(r.dimension(), 5)
         self.assertEqual(r.classes(), 10)
+
+    def test_parameter_values(self):
+        actual = self.model.parameter_values()
+        expected = ModelParameters(
+            numpy.array(
+                [
+                    [0.1, 0.4],
+                    [0.2, 0.5],
+                    [0.3, 0.6]
+                ]
+            ),
+            numpy.array([0.7, 0.8])
+        )
+        self.assertEqual(actual, expected)
+
 
 if __name__ == '__main__':
     unittest.main()

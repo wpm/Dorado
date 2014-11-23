@@ -5,6 +5,7 @@ import theano
 import theano.tensor as T
 
 from dorado.model.model import Model
+from dorado.model.model_parameters import ModelParameters
 
 
 class TheanoModel(Model):
@@ -68,6 +69,13 @@ class TheanoModel(Model):
     def train(self, data, rate=0.13):
         self.sgd_training_iteration(data.labels, data.vectors, rate)
         return self
+
+    def parameter_values(self):
+        return ModelParameters(*[p.get_value() for p in self.parameters()])
+
+    def set_parameter_values(self, values):
+        for p, v in zip(self.parameters(), values.parameters):
+            p.set_value(v)
 
     def __add__(self, other):
         s = self.copy()
