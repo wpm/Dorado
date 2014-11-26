@@ -9,11 +9,12 @@ import urllib
 
 import numpy
 
+from dorado import train
 from dorado.data import LabeledData
 from dorado.model.logistic_regression import LogisticRegression
 from dorado.model.neural_network import NeuralNetwork
 from dorado.model.static_linear import StaticLinearModel
-from dorado.train import averaged_epochs, train_model, spark_averaged_epochs, serial_epochs
+from dorado.search import SparkParallelAveragedSearch, SequentialSearch, ParallelAveragedSearch
 
 
 def run(spark_context=None):
@@ -59,16 +60,18 @@ def run(spark_context=None):
         parser.error("Unrecognized argument %s" % ' '.join(extra_args))
 
     if args.command == 'train':
-        if not args.seed == None:
+        if not args.seed is None:
             numpy.random.seed(args.seed)
-        if args.model_type == 'random':
-            model = StaticLinearModel.random(args.training.dimension(), args.training.classes())
-        elif args.model_type == 'logreg':
-            model = LogisticRegression(args.training.dimension(), args.training.classes(), args.l1, args.l2)
-        elif args.model_type == 'neural':
-            model = NeuralNetwork(args.training.dimension(), args.training.classes(), args.hidden, args.l1, args.l2)
-        else:
-            raise Exception("Invalid model type %s" % args.model_type)
+        model_types = {
+            'random': (StaticLinearModel.factory,
+                       StaticLinearModel.initial_parameters(args.training.dimension(), args.training.classes())),
+            'logreg': (LogisticRegression.factory(args.l1, args.l2),
+                       LogisticRegression.initial_parameters(args.training.dimension(), args.training.classes())),
+            'neural': (NeuralNetwork.factory(args.l1, args.l2),
+                       NeuralNetwork.initial_parameters(args.training.dimension(), args.training.classes(),
+                                                        args.hidden))
+        }
+        model_factory, initial_parameters = model_types[args.model_type]
         if not spark_context and args.spark:
             spark_cmd = "%s %s %s %s" % (args.spark_submit, ' '.join(extra_args),
                                          os.path.join(os.path.dirname(__file__), 'spark.py'),
@@ -77,19 +80,13 @@ def run(spark_context=None):
             subprocess.call(spark_cmd, shell=True)
         else:
             if spark_context:
-                epochs = lambda m, train_batches: \
-                    spark_averaged_epochs(spark_context, m, train_batches, rate=args.rate)
+                search = SparkParallelAveragedSearch(spark_context, args.batches, args.learning_rate, args.patience)
             else:
                 if args.serial:
-                    epochs = lambda m, train_batches: serial_epochs(m, train_batches, rate=args.rate)
+                    search = SequentialSearch(args.batches, args.learning_rate, args.patience)
                 else:
-                    epochs = lambda m, train_batches: averaged_epochs(m, train_batches, rate=args.rate)
-            model, validation_error = train_model(epochs,
-                                                  model,
-                                                  args.training,
-                                                  args.validation,
-                                                  args.batches,
-                                                  args.patience)
+                    search = ParallelAveragedSearch(args.batches, args.learning_rate, args.patience)
+            model, validation_error = train(model_factory, initial_parameters, args.training, args.validation, search)
             logging.info("Best validation error %0.4f" % validation_error)
             cPickle.dump(model, args.model)
     elif args.command == 'test':

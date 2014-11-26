@@ -4,47 +4,48 @@ import numpy
 import theano
 import theano.tensor as T
 
+from dorado import random_matrix
 from dorado.model.theano_model import TheanoModel
+from dorado.model.parameters import ModelParameters
 
 
 class NeuralNetwork(TheanoModel):
-    def __init__(self, dimension, classes, h, l1=0.0, l2=0.0):
-        self.h = h
-        b = 4 * sqrt(6.0 / (dimension + self.h))
-        self.H = theano.shared(self._random_matrix(dimension, self.h, b), name='H')
-        self.d = theano.shared(numpy.zeros((self.h,), dtype=theano.config.floatX), name='d')
-        b = 4 * sqrt(6.0 / (self.h + classes))
-        self.U = theano.shared(self._random_matrix(self.h, classes, b), name='U')
-        self.W = theano.shared(numpy.zeros((dimension, classes), dtype=theano.config.floatX), name='W')
-        self.b = theano.shared(numpy.zeros((classes,), dtype=theano.config.floatX), name='b')
+    @staticmethod
+    def initial_parameters(dimension, classes, hidden):
+        w = numpy.zeros((dimension, classes), dtype=theano.config.floatX)
+        b = numpy.zeros((classes,), dtype=theano.config.floatX)
+        bound = 4 * sqrt(6.0 / (dimension + hidden))
+        h = random_matrix(dimension, hidden, bound)
+        d = numpy.zeros((hidden,), dtype=theano.config.floatX)
+        bound = 4 * sqrt(6.0 / (hidden + classes))
+        u = random_matrix(hidden, classes, bound)
+        return ModelParameters(w, b, h, d, u)
+
+    def __init__(self, w, b, h, d, u, l1=0.0, l2=0.0):
+        dimension, classes = w.shape
+        self.w = theano.shared(w, name='W')
+        self.b = theano.shared(b, name='b')
+        self.h = theano.shared(h, name='H')
+        self.d = theano.shared(d, name='d')
+        self.u = theano.shared(u, name='U')
         super(NeuralNetwork, self).__init__(dimension, classes, l1, l2)
 
+    def dimension(self):
+        return self.w.shape[0]
+
+    def classes(self):
+        return self.w.shape[1]
+
     def parameters(self):
-        return [self.W, self.b, self.H, self.d, self.U]
+        return [self.w, self.b, self.h, self.d, self.u]
 
     def regularized_parameters(self):
-        return [self.H, self.U, self.W]
+        return [self.h, self.u, self.w]
 
     def p_y_given_x(self):
-        return T.nnet.softmax(T.dot(T.dot(self.x, self.H) + self.d, self.U) + T.dot(self.x, self.W) + self.b)
+        return T.nnet.softmax(T.dot(T.dot(self.x, self.h) + self.d, self.u) + T.dot(self.x, self.w) + self.b)
 
     def __repr__(self):
         return "<%s, %d dimensions, %d classes, hidden layer size %d>" % \
-               (self.__class__.__name__, self.dimension(), self.classes(), self.h)
+               (self.__class__.__name__, self.dimension(), self.classes(), self.d.shape)
 
-    def _random_matrix(self, r, c, b=1):
-        """
-        Matrix with random elements selected uniformly from [-b, b].
-
-        :type r: int
-        :param r: rows
-
-        :type c: int
-        :param c: columns
-
-        :type b: float
-        :param b: bound
-
-        :returns: randomly generated matrix
-        """
-        return numpy.random.uniform(-b, b, (r, c))

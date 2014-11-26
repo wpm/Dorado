@@ -2,7 +2,6 @@ import itertools
 
 import numpy
 
-
 class LabeledData(object):
     def __init__(self, vectors, labels):
         assert len(vectors) == len(labels)
