@@ -21,12 +21,12 @@ class Epochs(object):
 
 class SequentialEpochs(Epochs):
     def __call__(self, model_factory, initial_parameters, training_data):
-        training_batches = self._partitions(training_data)
+        training_batches = list(self._partitions(training_data))
         model = model_factory(initial_parameters)
         while True:
             for batch in training_batches:
                 model.train(batch, self.learning_rate)
-                yield model.get_parameters()
+            yield model.get_parameters()
 
 
 class ParallelAveragedEpochs(Epochs):

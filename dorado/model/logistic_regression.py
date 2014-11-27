@@ -19,7 +19,7 @@ class LogisticRegression(TheanoModel):
         self.w = theano.shared(w, name='W')
         self.b = theano.shared(b, name='b')
         super(LogisticRegression, self).__init__(l1, l2, w, b)
-        logging.info("Created %s" % self)
+        logging.debug("Created %s" % self)
 
     def dimension(self):
         return self.w.get_value().shape[0]

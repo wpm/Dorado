@@ -17,7 +17,7 @@ def train(model_factory, initial_parameters, training_data, validation_data, epo
     wait = epochs.patience
     logging.info("Initial validation error %0.4f" % model.error_rate(validation_data))
     for i, parameters in enumerate(epochs(model_factory, initial_parameters, training_data), 1):
-        model.parameters = parameters
+        model.set_parameters(parameters)
         validation_error = model.error_rate(validation_data)
         logging.info("Epoch %d (%d), validation error %0.4f" % (i, wait, validation_error))
         if validation_error >= best_error:
