@@ -28,7 +28,7 @@ class NeuralNetwork(TheanoModel):
         self.h = theano.shared(h, name='H')
         self.d = theano.shared(d, name='d')
         self.u = theano.shared(u, name='U')
-        super(NeuralNetwork, self).__init__(dimension, classes, l1, l2)
+        super(NeuralNetwork, self).__init__(l1, l2, dimension, classes)
 
     def dimension(self):
         return self.w.shape[0]
