@@ -57,7 +57,7 @@ def run(spark_context=None):
         level=getattr(logging, args.log.upper()))
 
     logging.info("Begin")
-    if not (args.spark or spark_context) and extra_args:
+    if not (args.command == 'train' and (args.spark or spark_context)) and extra_args:
         parser.error("Unrecognized argument %s" % ' '.join(extra_args))
 
     if args.command == 'train':
