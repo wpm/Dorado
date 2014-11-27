@@ -23,8 +23,8 @@ def run(spark_context=None):
     train_test_parser = parser.add_subparsers(dest='command')
     train_parser = train_test_parser.add_parser('train', help='train a model')
     common_train = argparse.ArgumentParser(add_help=False)
-    common_train.add_argument('training', type=load_compressed, help='training data')
-    common_train.add_argument('validation', type=load_compressed, help='validation data')
+    common_train.add_argument('training', help='training data')
+    common_train.add_argument('validation', help='validation data')
     common_train.add_argument('model', type=write_compressed, help='compressed model file')
     common_train.add_argument('--learning-rate', type=float, default=0.13, help='learning rate, default 0.13')
     common_train.add_argument('--patience', type=int, default=5, help='epochs of patience, default 5')
@@ -56,13 +56,19 @@ def run(spark_context=None):
         datefmt='%y/%m/%d %I:%M:%S',
         level=getattr(logging, args.log.upper()))
 
+    logging.info("Begin")
     if not (args.spark or spark_context) and extra_args:
         parser.error("Unrecognized argument %s" % ' '.join(extra_args))
 
     if args.command == 'train':
         if not args.seed is None:
             numpy.random.seed(args.seed)
-        model_factory, initial_parameters = select_model_type(args)
+        for filename in [args.training, args.validation]:
+            if not os.path.isfile(filename):
+                parser.error("%s is not a file" % filename)
+        training_data = load_compressed(args.training)
+        validation_data = load_compressed(args.validation)
+        model_factory, initial_parameters = select_model_type(args, training_data.dimension(), training_data.classes())
         if not spark_context and args.spark:
             spark_cmd = "%s %s %s %s" % (args.spark_submit, ' '.join(extra_args),
                                          os.path.join(os.path.dirname(__file__), 'spark.py'),
@@ -77,9 +83,10 @@ def run(spark_context=None):
                     epochs = SequentialEpochs(args.batches, args.learning_rate, args.patience)
                 else:
                     epochs = ParallelAveragedEpochs(args.batches, args.learning_rate, args.patience)
-            model, validation_error = train(model_factory, initial_parameters, args.training, args.validation, epochs)
+            model, validation_error = train(model_factory, initial_parameters, training_data, validation_data, epochs)
             logging.info("Best validation error %0.4f" % validation_error)
             cPickle.dump(model, args.model)
+            args.model.close()
     elif args.command == 'test':
         logging.info("Model %s, Data %s" % (args.model, args.test))
         print(args.model.error_rate(args.test))
@@ -103,29 +110,29 @@ def run(spark_context=None):
                 cPickle.dump(data, file)
     else:
         raise Exception("Invalid command %s" % args.command)
+    logging.info("Done")
 
 
-def select_model_type(args):
+def select_model_type(args, dimension, classes):
     if args.model_type == 'random':
-        return StaticLinearModel.factory(), \
-               StaticLinearModel.initial_parameters(args.training.dimension(), args.training.classes())
+        return StaticLinearModel.factory(), StaticLinearModel.initial_parameters(dimension, classes)
     elif args.model_type == 'logreg':
-        return LogisticRegression.factory(args.l1, args.l2), \
-               LogisticRegression.initial_parameters(args.training.dimension(), args.training.classes())
+        return LogisticRegression.factory(args.l1, args.l2), LogisticRegression.initial_parameters(dimension, classes)
     elif args.model_type == 'neural':
         return NeuralNetwork.factory(args.l1, args.l2), \
-               NeuralNetwork.initial_parameters(args.training.dimension(), args.training.classes(), args.hidden)
+               NeuralNetwork.initial_parameters(dimension, classes, args.hidden)
     else:
         raise Exception("Invalid model type %s" % args.model_type)
 
 
-def write_compressed(filename):
-    return gzip.open(filename, 'w')
-
-
 def load_compressed(filename):
+    logging.info("Open %s" % filename)
     with gzip.open(filename) as file:
         return cPickle.load(file)
+
+
+def write_compressed(filename):
+    return gzip.open(filename, 'w')
 
 
 if __name__ == "__main__":
