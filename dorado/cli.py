@@ -14,7 +14,7 @@ from dorado.data import LabeledData
 from dorado.model.logistic_regression import LogisticRegression
 from dorado.model.neural_network import NeuralNetwork
 from dorado.model.static_linear import StaticLinearModel
-from dorado.search import SparkParallelAveragedSearch, SequentialSearch, ParallelAveragedSearch
+from dorado.epochs import SparkParallelAveragedEpochs, SequentialEpochs, ParallelAveragedEpochs
 
 
 def run(spark_context=None):
@@ -80,13 +80,13 @@ def run(spark_context=None):
             subprocess.call(spark_cmd, shell=True)
         else:
             if spark_context:
-                search = SparkParallelAveragedSearch(spark_context, args.batches, args.learning_rate, args.patience)
+                epochs = SparkParallelAveragedEpochs(spark_context, args.batches, args.learning_rate, args.patience)
             else:
                 if args.serial:
-                    search = SequentialSearch(args.batches, args.learning_rate, args.patience)
+                    epochs = SequentialEpochs(args.batches, args.learning_rate, args.patience)
                 else:
-                    search = ParallelAveragedSearch(args.batches, args.learning_rate, args.patience)
-            model, validation_error = train(model_factory, initial_parameters, args.training, args.validation, search)
+                    epochs = ParallelAveragedEpochs(args.batches, args.learning_rate, args.patience)
+            model, validation_error = train(model_factory, initial_parameters, args.training, args.validation, epochs)
             logging.info("Best validation error %0.4f" % validation_error)
             cPickle.dump(model, args.model)
     elif args.command == 'test':

@@ -2,21 +2,21 @@ import operator
 import itertools
 
 
-class Search(object):
+class Epochs(object):
     def __init__(self, n, learning_rate, patience):
         self.n = n
         self.learning_rate = learning_rate
         self.patience = patience
 
-    def epochs(self, model_factory, initial_parameters, training_data):
+    def __call__(self, model_factory, initial_parameters, training_data):
         raise NotImplementedError()
 
     def _partitions(self, training_data):
         return training_data.shuffle().partition(self.n)
 
 
-class SequentialSearch(Search):
-    def epochs(self, model_factory, initial_parameters, training_data):
+class SequentialEpochs(Epochs):
+    def __call__(self, model_factory, initial_parameters, training_data):
         training_batches = self._partitions(training_data)
         model = model_factory(initial_parameters)
         while True:
@@ -25,8 +25,8 @@ class SequentialSearch(Search):
                 yield model.get_parameters()
 
 
-class ParallelAveragedSearch(Search):
-    def epochs(self, model_factory, initial_parameters, training_data):
+class ParallelAveragedEpochs(Epochs):
+    def __call__(self, model_factory, initial_parameters, training_data):
         zero = self._zero(initial_parameters)
         ensemble = self._create_ensemble(model_factory, initial_parameters, training_data)
         while True:
@@ -58,17 +58,17 @@ class ParallelAveragedSearch(Search):
         return model
 
 
-class SparkParallelAveragedSearch(ParallelAveragedSearch):
+class SparkParallelAveragedEpochs(ParallelAveragedEpochs):
     def __init__(self, spark_context, n, learning_rate, patience):
         self.spark_context = spark_context
-        super(SparkParallelAveragedSearch, self).__init__(n, learning_rate, patience)
+        super(SparkParallelAveragedEpochs, self).__init__(n, learning_rate, patience)
 
     def _zero(self, initial_parameters):
-        zero = super(SparkParallelAveragedSearch, self)._zero(initial_parameters)
+        zero = super(SparkParallelAveragedEpochs, self)._zero(initial_parameters)
         return self.spark_context.broadcast(zero)
 
     def _create_ensemble(self, model_factory, initial_parameters, training_data):
-        ensemble = super(SparkParallelAveragedSearch, self). \
+        ensemble = super(SparkParallelAveragedEpochs, self). \
             _create_ensemble(model_factory, initial_parameters, training_data)
         return self.spark_context.parallelize(ensemble)
 
