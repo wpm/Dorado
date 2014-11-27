@@ -68,9 +68,9 @@ def run(spark_context=None):
                 parser.error("%s is not a file" % filename)
         if os.path.exists(args.model):
             parser.error("%s already exists" % args.model)
-        training_data = load_compressed(args.training)
         validation_data = load_compressed(args.validation)
-        model_factory, initial_parameters = select_model_type(args, training_data.dimension(), training_data.classes())
+        model_factory, initial_parameters = \
+            select_model_type(args, validation_data.dimension(), validation_data.classes())
         if not spark_context and args.spark:
             spark_cmd = "%s %s %s" % (args.spark_submit,
                                       os.path.join(os.path.dirname(__file__), 'spark.py'),
@@ -78,6 +78,7 @@ def run(spark_context=None):
             logging.info(spark_cmd)
             subprocess.call(spark_cmd, shell=True)
         else:
+            training_data = load_compressed(args.training)
             if spark_context:
                 epochs = SparkParallelAveragedEpochs(spark_context, args.batches, args.learning_rate, args.patience)
             else:
