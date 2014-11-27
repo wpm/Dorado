@@ -7,8 +7,11 @@ import numpy
 
 
 def train(model_factory, initial_parameters, training_data, validation_data, epochs):
-    logging.info("%s, %s, %s, %s, %s" % (model_factory, initial_parameters, training_data, validation_data, epochs))
     model = model_factory(initial_parameters)
+    logging.info("Model %s" % model)
+    logging.info("Training data %s" % training_data)
+    logging.info("Validation data %s" % validation_data)
+    logging.info("Epochs %s" % epochs)
     best_error = numpy.Inf
     best_parameters = initial_parameters
     wait = epochs.patience

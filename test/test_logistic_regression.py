@@ -35,7 +35,7 @@ class LogisticRegressionTestCase(unittest.TestCase):
         w = numpy.arange(8, dtype=theano.config.floatX).reshape(4, 2)
         b = numpy.arange(2, dtype=theano.config.floatX)
         self.parameters = ModelParameters(w, b)
-        self.model = LogisticRegression(w, b)
+        self.model = LogisticRegression(0.0, 0.0, w, b)
 
     def test_training_iteration(self):
         original = copy.deepcopy(self.parameters)
@@ -53,6 +53,11 @@ class LogisticRegressionTestCase(unittest.TestCase):
         actual_w, actual_b = self.model.get_parameters()
         numpy.testing.assert_almost_equal(w, actual_w)
         numpy.testing.assert_almost_equal(b, actual_b)
+
+    def test_factory(self):
+        factory = LogisticRegression.factory(0.01, 0.02)
+        model = factory(self.parameters)
+        self.assertEqual(model, LogisticRegression(0.01, 0.02, self.parameters[0], self.parameters[1]))
 
 
 if __name__ == '__main__':

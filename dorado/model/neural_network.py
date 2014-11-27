@@ -21,7 +21,7 @@ class NeuralNetwork(TheanoModel):
         u = random_matrix(hidden, classes, bound)
         return ModelParameters(w, b, h, d, u)
 
-    def __init__(self, w, b, h, d, u, l1=0.0, l2=0.0):
+    def __init__(self, l1, l2, w, b, h, d, u):
         dimension, classes = w.shape
         self.w = theano.shared(w, name='W')
         self.b = theano.shared(b, name='b')

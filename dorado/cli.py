@@ -26,7 +26,7 @@ def run(spark_context=None):
     common_train.add_argument('training', type=load_compressed, help='training data')
     common_train.add_argument('validation', type=load_compressed, help='validation data')
     common_train.add_argument('model', type=write_compressed, help='compressed model file')
-    common_train.add_argument('--rate', type=float, default=0.13, help='learning rate, default 0.13')
+    common_train.add_argument('--learning-rate', type=float, default=0.13, help='learning rate, default 0.13')
     common_train.add_argument('--patience', type=int, default=5, help='epochs of patience, default 5')
     common_train.add_argument('--batches', type=int, default=100, help='number of batches, default 100')
     common_train.add_argument('--seed', type=int, help='random number seed')
@@ -62,16 +62,7 @@ def run(spark_context=None):
     if args.command == 'train':
         if not args.seed is None:
             numpy.random.seed(args.seed)
-        model_types = {
-            'random': (StaticLinearModel.factory,
-                       StaticLinearModel.initial_parameters(args.training.dimension(), args.training.classes())),
-            'logreg': (LogisticRegression.factory(args.l1, args.l2),
-                       LogisticRegression.initial_parameters(args.training.dimension(), args.training.classes())),
-            'neural': (NeuralNetwork.factory(args.l1, args.l2),
-                       NeuralNetwork.initial_parameters(args.training.dimension(), args.training.classes(),
-                                                        args.hidden))
-        }
-        model_factory, initial_parameters = model_types[args.model_type]
+        model_factory, initial_parameters = select_model_type(args)
         if not spark_context and args.spark:
             spark_cmd = "%s %s %s %s" % (args.spark_submit, ' '.join(extra_args),
                                          os.path.join(os.path.dirname(__file__), 'spark.py'),
@@ -112,6 +103,20 @@ def run(spark_context=None):
                 cPickle.dump(data, file)
     else:
         raise Exception("Invalid command %s" % args.command)
+
+
+def select_model_type(args):
+    if args.model_type == 'random':
+        return StaticLinearModel.factory(), \
+               StaticLinearModel.initial_parameters(args.training.dimension(), args.training.classes())
+    elif args.model_type == 'logreg':
+        return LogisticRegression.factory(args.l1, args.l2), \
+               LogisticRegression.initial_parameters(args.training.dimension(), args.training.classes())
+    elif args.model_type == 'neural':
+        return NeuralNetwork.factory(args.l1, args.l2), \
+               NeuralNetwork.initial_parameters(args.training.dimension(), args.training.classes(), args.hidden)
+    else:
+        raise Exception("Invalid model type %s" % args.model_type)
 
 
 def write_compressed(filename):

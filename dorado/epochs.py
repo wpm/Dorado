@@ -8,6 +8,10 @@ class Epochs(object):
         self.learning_rate = learning_rate
         self.patience = patience
 
+    def __repr__(self):
+        return "<%s, %d batches, learning rate %0.3f, patience %d>" % \
+               (self.__class__.__name__, self.n, self.learning_rate, self.patience)
+
     def __call__(self, model_factory, initial_parameters, training_data):
         raise NotImplementedError()
 
@@ -43,7 +47,8 @@ class ParallelAveragedEpochs(Epochs):
         return zip(batches, itertools.repeat(model_factory(initial_parameters), self.n))
 
     def _train_models(self, ensemble):
-        reduce(operator.add, [self._train_model(model, batch) for batch, model in ensemble])
+        for batch, model in ensemble:
+            model.train(batch, self.learning_rate)
 
     def _average_parameters(self, ensemble, zero):
         s = reduce(operator.add, [model.get_parameters() for _, model in ensemble], zero)
@@ -52,10 +57,6 @@ class ParallelAveragedEpochs(Epochs):
     def _update_parameters(self, ensemble, parameters):
         for _, model in ensemble:
             model.set_parameters(parameters)
-
-    def _train_model(self, model, data):
-        model.train(data, self.learning_rate)
-        return model
 
 
 class SparkParallelAveragedEpochs(ParallelAveragedEpochs):
@@ -73,7 +74,7 @@ class SparkParallelAveragedEpochs(ParallelAveragedEpochs):
         return self.spark_context.parallelize(ensemble)
 
     def _train_models(self, ensemble):
-        ensemble.map(lambda batch, model: self._train_model(model, batch))
+        ensemble.map(lambda batch, model: model.train(batch, self.learning_rate))
 
     def _average_parameters(self, ensemble, zero):
         s = ensemble.map(lambda _, model: model.get_parameters()).fold(zero.value, operator.add)
