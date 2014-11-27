@@ -64,6 +64,8 @@ class SparkParallelAveragedEpochs(ParallelAveragedEpochs):
         self.spark_context = spark_context
         super(SparkParallelAveragedEpochs, self).__init__(n, learning_rate, patience)
 
+    # TODO Partition the training set with Spark.
+
     def _zero(self, initial_parameters):
         zero = super(SparkParallelAveragedEpochs, self)._zero(initial_parameters)
         return self.spark_context.broadcast(zero)
@@ -77,7 +79,7 @@ class SparkParallelAveragedEpochs(ParallelAveragedEpochs):
         ensemble.map(lambda batch, model: model.train(batch, self.learning_rate))
 
     def _average_parameters(self, ensemble, zero):
-        s = ensemble.map(lambda _, model: model.get_parameters()).fold(zero.value, operator.add)
+        s = ensemble.map(lambda a: a[1].get_parameters()).fold(zero.value, operator.add)
         return s / self.n
 
     def _update_parameters(self, ensemble, parameters):

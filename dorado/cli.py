@@ -53,7 +53,7 @@ def run(spark_context=None):
 
     logging.basicConfig(
         format='%(asctime)s %(levelname)s %(message)s',
-        datefmt='%y/%m/%d %I:%M:%S',
+        datefmt='%y/%m/%d %H:%M:%S',
         level=getattr(logging, args.log.upper()))
 
     logging.info("Begin")
@@ -72,9 +72,9 @@ def run(spark_context=None):
         validation_data = load_compressed(args.validation)
         model_factory, initial_parameters = select_model_type(args, training_data.dimension(), training_data.classes())
         if not spark_context and args.spark:
-            spark_cmd = "%s %s %s %s" % (args.spark_submit, ' '.join(extra_args),
-                                         os.path.join(os.path.dirname(__file__), 'spark.py'),
-                                         ' '.join(sys.argv[1:]))
+            spark_cmd = "%s %s %s" % (args.spark_submit,
+                                      os.path.join(os.path.dirname(__file__), 'spark.py'),
+                                      ' '.join(sys.argv[1:]))
             logging.info(spark_cmd)
             subprocess.call(spark_cmd, shell=True)
         else:
