@@ -25,7 +25,7 @@ def run(spark_context=None):
     common_train = argparse.ArgumentParser(add_help=False)
     common_train.add_argument('training', help='training data')
     common_train.add_argument('validation', help='validation data')
-    common_train.add_argument('model', type=write_compressed, help='compressed model file')
+    common_train.add_argument('model', help='compressed model file')
     common_train.add_argument('--learning-rate', type=float, default=0.13, help='learning rate, default 0.13')
     common_train.add_argument('--patience', type=int, default=5, help='epochs of patience, default 5')
     common_train.add_argument('--batches', type=int, default=100, help='number of batches, default 100')
@@ -66,6 +66,8 @@ def run(spark_context=None):
         for filename in [args.training, args.validation]:
             if not os.path.isfile(filename):
                 parser.error("%s is not a file" % filename)
+        if os.path.exists(args.model):
+            parser.error("%s already exists" % args.model)
         training_data = load_compressed(args.training)
         validation_data = load_compressed(args.validation)
         model_factory, initial_parameters = select_model_type(args, training_data.dimension(), training_data.classes())
@@ -85,9 +87,7 @@ def run(spark_context=None):
                     epochs = ParallelAveragedEpochs(args.batches, args.learning_rate, args.patience)
             model, validation_error = train(model_factory, initial_parameters, training_data, validation_data, epochs)
             logging.info("Best validation error %0.4f" % validation_error)
-            logging.info("Save model %s" % args.model.name)
-            cPickle.dump(model, args.model)
-            args.model.close()
+            write_compressed(model, args.model)
     elif args.command == 'test':
         logging.info("Model %s, Data %s" % (args.model, args.test))
         print(args.model.error_rate(args.test))
@@ -107,8 +107,7 @@ def run(spark_context=None):
             logging.info("Write %s" % n)
             vectors, labels = data
             data = LabeledData(vectors, labels)
-            with gzip.open(n, 'w') as file:
-                cPickle.dump(data, file)
+            write_compressed(data, n)
     else:
         raise Exception("Invalid command %s" % args.command)
     logging.info("Done")
@@ -127,13 +126,15 @@ def select_model_type(args, dimension, classes):
 
 
 def load_compressed(filename):
-    logging.info("Open %s" % filename)
-    with gzip.open(filename) as file:
-        return cPickle.load(file)
+    logging.info("Read %s" % filename)
+    with gzip.open(filename) as f:
+        return cPickle.load(f)
 
 
-def write_compressed(filename):
-    return gzip.open(filename, 'w')
+def write_compressed(o, filename):
+    logging.info("Write %s" % filename)
+    with gzip.open(filename, 'w') as f:
+        cPickle.dump(o, f)
 
 
 if __name__ == "__main__":
