@@ -2,6 +2,9 @@ import numpy
 
 
 class ModelParameters(tuple):
+    def __repr__(self):
+        return "<%s %s>" % (self.__class__.__name__, super(ModelParameters, self).__repr__())
+
     def __new__(cls, *parameter_values):
         return super(ModelParameters, cls).__new__(cls, tuple(parameter_values))
 
