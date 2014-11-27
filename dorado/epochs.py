@@ -1,5 +1,4 @@
 import operator
-import itertools
 
 
 class Epochs(object):
@@ -44,7 +43,8 @@ class ParallelAveragedEpochs(Epochs):
 
     def _create_ensemble(self, model_factory, initial_parameters, training_data):
         batches = self._partitions(training_data)
-        return zip(batches, itertools.repeat(model_factory(initial_parameters), self.n))
+        models = [model_factory(initial_parameters) for _ in xrange(self.n)]
+        return zip(batches, models)
 
     def _train_models(self, ensemble):
         for batch, model in ensemble:

@@ -85,6 +85,7 @@ def run(spark_context=None):
                     epochs = ParallelAveragedEpochs(args.batches, args.learning_rate, args.patience)
             model, validation_error = train(model_factory, initial_parameters, training_data, validation_data, epochs)
             logging.info("Best validation error %0.4f" % validation_error)
+            logging.info("Save model %s" % args.model.name)
             cPickle.dump(model, args.model)
             args.model.close()
     elif args.command == 'test':
