@@ -5,8 +5,8 @@ from dorado.model.parameters import ModelParameters
 
 
 class StaticLinearModel(Model):
-    @classmethod
-    def initial_parameters(cls, dimension, classes):
+    @staticmethod
+    def initial_parameters(dimension, classes):
         w = numpy.random.rand(dimension, classes)
         b = numpy.random.rand(classes)
         return ModelParameters(w, b)
