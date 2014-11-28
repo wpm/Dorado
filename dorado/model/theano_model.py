@@ -8,7 +8,7 @@ from dorado.model.parameters import ModelParameters
 
 class TheanoModel(Model):
     @classmethod
-    def factory(cls, l1, l2):
+    def factory(cls, l1=0.0, l2=0.0):
         return lambda parameters: cls(l1, l2, *parameters)
 
     def __init__(self, l1=0.0, l2=0.0, *params):

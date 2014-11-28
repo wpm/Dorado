@@ -1,6 +1,4 @@
 import argparse
-import cPickle
-import gzip
 import logging
 import os
 import sys
@@ -9,7 +7,7 @@ import urllib
 
 import numpy
 
-from dorado import train
+from dorado import train, initialize_logging, load_compressed, write_compressed
 from dorado.data import LabeledData
 from dorado.model.logistic_regression import LogisticRegression
 from dorado.model.neural_network import NeuralNetwork
@@ -51,10 +49,7 @@ def run(spark_context=None):
     mnist_parser.add_argument('--destination', default='.', help='download destination, default current directory')
     args, extra_args = parser.parse_known_args()
 
-    logging.basicConfig(
-        format='%(asctime)s %(levelname)s %(message)s',
-        datefmt='%y/%m/%d %H:%M:%S',
-        level=getattr(logging, args.log.upper()))
+    initialize_logging(args.log)
 
     logging.info("Begin")
     if not (args.command == 'train' and (args.spark or spark_context)) and extra_args:
@@ -124,18 +119,6 @@ def select_model_type(args, dimension, classes):
                NeuralNetwork.initial_parameters(dimension, classes, args.hidden)
     else:
         raise Exception("Invalid model type %s" % args.model_type)
-
-
-def load_compressed(filename):
-    logging.info("Read %s" % filename)
-    with gzip.open(filename) as f:
-        return cPickle.load(f)
-
-
-def write_compressed(o, filename):
-    logging.info("Write %s" % filename)
-    with gzip.open(filename, 'w') as f:
-        cPickle.dump(o, f)
 
 
 if __name__ == "__main__":

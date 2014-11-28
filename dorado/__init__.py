@@ -1,6 +1,8 @@
 """
 Distributed machine learning with Theano and Spark
 """
+import cPickle
+import gzip
 import logging
 
 import numpy
@@ -28,6 +30,7 @@ def train(model_factory, initial_parameters, training_data, validation_data, epo
             best_parameters = parameters
             best_error = validation_error
             wait = epochs.patience
+    # TODO Return a model, not parameters.
     return best_parameters, best_error
 
 
@@ -47,3 +50,20 @@ def random_matrix(r, c, b=1):
     :returns: randomly generated matrix
     """
     return numpy.random.uniform(-b, b, (r, c))
+
+
+def initialize_logging(level):
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', datefmt='%y/%m/%d %H:%M:%S',
+                        level=getattr(logging, level.upper()))
+
+
+def load_compressed(filename):
+    logging.info("Read %s" % filename)
+    with gzip.open(filename) as f:
+        return cPickle.load(f)
+
+
+def write_compressed(o, filename):
+    logging.info("Write %s" % filename)
+    with gzip.open(filename, 'w') as f:
+        cPickle.dump(o, f)
