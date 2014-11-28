@@ -30,8 +30,8 @@ def train(model_factory, initial_parameters, training_data, validation_data, epo
             best_parameters = parameters
             best_error = validation_error
             wait = epochs.patience
-    # TODO Return a model, not parameters.
-    return best_parameters, best_error
+    model.set_parameters(best_parameters)
+    return model, best_error
 
 
 def random_matrix(r, c, b=1):

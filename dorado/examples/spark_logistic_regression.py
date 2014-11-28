@@ -77,9 +77,9 @@ if __name__ == "__main__":
 
     training_data = load_compressed(args.training)
     validation_data = load_compressed(args.validation)
-    best_parameters, best_error = \
+    model, validation_error = \
         spark_logistic_regression_train(training_data, validation_data, args.l1, args.l2,
                                         args.batches, args.learning_rate, args.patience)
-    logging.info("Best validation error %0.4f" % best_error)
-    write_compressed(best_parameters, args.model)
+    logging.info("Validation error %0.4f" % validation_error)
+    write_compressed(model, args.model)
     logging.info("Done")
